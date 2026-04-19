@@ -1,8 +1,32 @@
-# envctr
+<div align="center">
+
+```
+███████╗███╗   ██╗██╗   ██╗ ██████╗████████╗██████╗ 
+██╔════╝████╗  ██║██║   ██║██╔════╝╚══██╔══╝██╔══██╗
+█████╗  ██╔██╗ ██║██║   ██║██║        ██║   ██████╔╝
+██╔══╝  ██║╚██╗██║╚██╗ ██╔╝██║        ██║   ██╔══██╗
+███████╗██║ ╚████║ ╚████╔╝ ╚██████╗   ██║   ██║  ██║
+╚══════╝╚═╝  ╚═══╝  ╚═══╝   ╚═════╝   ╚═╝   ╚═╝  ╚═╝
+```
 
 **Reproducible Developer Environment Provisioner & Drift Detector**
 
+[![License](https://img.shields.io/badge/license-MIT-blue?style=flat)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-lightgrey?style=flat)]()
+[![Shell](https://img.shields.io/badge/shell-Bash%205.0+-green?style=flat)]()
+[![Language](https://img.shields.io/badge/language-Bash%20%2F%20C-orange?style=flat)]()
+[![Backends](https://img.shields.io/badge/backends-Docker%20%7C%20QEMU(KVM)%20%7C%20chroot-informational?style=flat)]()
+
+
+<br/>
+
+> **envctr** — fingerprint your project, provision the environment, lock the state, detect drift before it becomes a 2am incident.
+
+<br/>
+
 ---
+
+</div>
 
 ## Table of Contents
 
@@ -43,7 +67,7 @@ Every software engineering team eventually hits the same wall. A developer clone
 This is not a minor inconvenience. It is a structural problem with real costs.
 
 ```
-Without envctr                         With envctr
+Without envctr                           With envctr
 ---------------------------------------- ----------------------------------------
 Read README and guess dependencies   --> envctr -b docker -p ./myproject
 Install wrong Node version           --> Environment detected and provisioned
@@ -83,7 +107,7 @@ Using the dependency graph and the chosen backend, envctr provisions the environ
 Once the environment is running and verified, envctr writes `envctr.lock` to the project root. This file is committed to version control and serves as the single source of truth for the environment.
 
 **Phase 4 — Drift detection**
-On subsequent runs with the `-d` flag, envctr inspects the live environment and diffs it against the lockfile. Differences are classified by severity: breaking changes (wrong runtime version, missing required service), warnings (manually installed packages, changed ports), and informational (cosmetic config changes).
+On subsequent runs with the `--drift` flag, envctr inspects the live environment and diffs it against the lockfile. Differences are classified by severity: breaking changes (wrong runtime version, missing required service), warnings (manually installed packages, changed ports), and informational (cosmetic config changes).
 
 ---
 
@@ -170,9 +194,9 @@ The `envctr.lock` file is the artifact that makes environments reproducible. It 
 
 [meta]
 envctr_version = 1.0.0
-project_name     = myapi
-generated_at     = 2026-05-01-14-32-00
-generated_by     = ahmed
+project_name   = myapi
+generated_at   = 2026-05-01-14-32-00
+generated_by   = ahmed
 
 [runtime]
 language  = node
@@ -391,7 +415,7 @@ Reproducing development environments is a daily problem for every software engin
 `-h` `-f` `-t` `-s` `-l` `-r` plus additional options `--from-lock` `--drift` `--restore` `--dry-run` `--export`
 
 ### 3.2.2 — Mandatory parameter
-`-b <backend>` and `-p <directory>` are both required. Absence of either triggers errors 101.
+`-b <backend>` and `-p <directory>` are both required. Absence of either triggers error 101.
 
 ### 3.2.2 — Unix/Linux commands used
 `find`, `grep`, `awk`, `sed`, `tee`, `tar`, `ssh`, `curl`, `docker`, `qemu-system-x86_64`, `chroot`, `debootstrap`, `diff`, `stat`, `wc`, `sort`, `uniq`, `file`, `env`, `chmod`, `chown`
@@ -463,7 +487,7 @@ envctr -b docker -p ./examples/microservices-monorepo -t
 ```
 envctr/
 |
-+-- envctr.sh                        <- Main script (entry point)
++-- envctr.sh                          <- Main script (entry point)
 |
 +-- core/
 |   +-- fingerprint.sh                 <- Stack detection and dependency graph
@@ -486,8 +510,8 @@ envctr/
 |   +-- node-api/                      <- Medium scenario: Node + PostgreSQL + Redis
 |   +-- microservices-monorepo/        <- Heavy scenario: 8 services
 |
-+-- envctr.lock                      <- Example lockfile
-+-- envctr.conf                      <- Default configuration
++-- envctr.lock                        <- Example lockfile
++-- envctr.conf                        <- Default configuration
 +-- README.md                          <- This file
 ```
 

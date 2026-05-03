@@ -1,0 +1,6 @@
+helpers/fork_helper
+helpers/thread_helper
+*.o
+tests/tmp/
+*.log
+.env

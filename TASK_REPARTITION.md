@@ -9,12 +9,12 @@ Start date: 04/05/2026
 
 ## Team Overview
 
-| Member | Role | Linux level | GitHub handle |
-|---|---|---|---|
-| Ahmed (you) | Lead architect | Advanced | @XaMiNeZH |
-| Teammate 2 | Backend systems | Intermediate | TBD |
-| Teammate 3 (the girl) | Frontend/docs | Beginner — motivated | TBD |
-| Teammate 4 | Testing/examples | Beginner | TBD |
+| Member                | Role             | Linux level  | GitHub handle  |
+| --------------------- | ---------------- | ------------ | -------------- |
+| EZ-ZAHERY Ahmed Amine | Lead architect   | Advanced     | @XaMiNeZH      |
+| Marwa MACHACH         | Backend systems  | Advanced     | @marwamachach  |
+| ALAMI Yassine         | Frontend/docs    | Intermediate | @Yassine-Al    |
+| Hicham AZENKOUK       | Testing/examples | Beginner     | @aazenkouk-dev |
 
 ---
 
@@ -35,7 +35,7 @@ Day 10 (13/05) — Final review, ZIP packaging, submission
 
 ---
 
-## Person 1 — Ahmed (Lead Architect)
+## Person 1 - XaMiNeZH (Lead Architect)
 
 **Owns:** `envctr` (main script), `core/errors.sh`, `helpers/fork_helper.c`,
 `helpers/thread_helper.c`, `backends/qemu.sh`, integration, PR reviews
@@ -102,7 +102,7 @@ You also review every PR before merge to `dev`.
 
 ---
 
-## Person 2 — Teammate (Intermediate Linux)
+## Person 2 - marwamachach (Backend systems)
 
 **Owns:** `core/fingerprint.sh`, `backends/docker.sh`, `core/lock.sh`
 
@@ -112,14 +112,14 @@ regex-heavy Bash and Docker API calls.
 
 ### Day 2-3
 
-Write `core/logger.sh` first — everyone depends on it:
+Write `core/logger.sh` first - everyone depends on it:
 - `log_message()` function takes two args: `TYPE` (INFOS or ERROR) and `MSG`
 - Gets timestamp via `date +"%Y-%m-%d-%H-%M-%S"`
 - Gets username via `whoami`
 - Formats: `$TIMESTAMP : $USER : $TYPE : $MSG`
 - Outputs via `echo "$LINE" | tee -a "$LOG_FILE"`
 - Creates `$LOG_DIR` if it does not exist
-- `LOG_FILE="$LOG_DIR/history.log"` — default `/var/log/envctr/history.log`
+- `LOG_FILE="$LOG_DIR/history.log"` - default `/var/log/envctr/history.log`
 
 **This function must be working and pushed before anyone else writes a single
 line of feature code.** Every other file calls `log_message()`.
@@ -128,7 +128,7 @@ line of feature code.** Every other file calls `log_message()`.
 
 Write `core/fingerprint.sh`:
 - `fingerprint()` function takes project directory as argument
-- Check for `Dockerfile` first — if exists, read it directly and skip inference
+- Check for `Dockerfile` first - if exists, read it directly and skip inference
 - Detect runtime from manifest files using `grep`, `awk`, `sed`:
   - `package.json` → Node.js, extract version from `engines.node`
   - `requirements.txt` / `pyproject.toml` → Python
@@ -158,14 +158,14 @@ Write `backends/docker.sh`:
 - Call `log_message` at each step
 
 Write `core/lock.sh`:
-- `generate_lock()` — writes `envctr.lock` from detected/provisioned state
-- `parse_lock()` — reads `envctr.lock` into variables
-- `lock_exists()` — returns 0 if lockfile present and valid
+- `generate_lock()` - writes `envctr.lock` from detected/provisioned state
+- `parse_lock()` - reads `envctr.lock` into variables
+- `lock_exists()` - returns 0 if lockfile present and valid
 - Format must match spec exactly (INI-style sections)
 
 ---
 
-## Person 3 — Teammate (Beginner, motivated)
+## Person 3 - Yassine-Al (Frontend/docs)
 
 **Owns:** `core/drift.sh`, `core/explain.sh`, `backends/chroot.sh`, `docs/`
 
@@ -223,20 +223,20 @@ Write `core/explain.sh`:
 ### Day 7
 
 Create `examples/flask-simple/`:
-- `app.py` — minimal Flask hello world
-- `requirements.txt` — flask==3.0.0
+- `app.py` - minimal Flask hello world
+- `requirements.txt`  flask==3.0.0
 - No database, no external services
 - Must be fingerprinted cleanly by `core/fingerprint.sh`
 
 Update all docs in `docs/`:
 - Keep `USAGE.md`, `TEST_SCENARIOS.md`, `VERSIONING.md` up to date as
   implementation changes
-- Write the `-h` help text that will go inside `show_help()` — Linux man-page
+- Write the `-h` help text that will go inside `show_help()` - Linux man-page
   style, plain text, clear sections
 
 ---
 
-## Person 4 — Teammate (Beginner)
+## Person 4 - aazenkouk-dev  (Testing/examples)
 
 **Owns:** Test scripts, example projects (node-api, microservices-monorepo),
 final submission packaging
@@ -249,16 +249,16 @@ the test scenario document without needing to understand the full codebase.
 
 Read:
 - `TEST_SCENARIOS.md` completely
-- `USAGE.md` — the quick start and common commands sections
+- `USAGE.md` - the quick start and common commands sections
 - Study how PipePilot's `tests/test_light.sh` is structured as a reference
 
 ### Day 3-4
 
 Create `examples/node-api/`:
 - `package.json` with `engines.node = "18"`, no build script
-- `index.js` — minimal Express server on port 3000
-- `knexfile.js` — PostgreSQL connection config (localhost:5432)
-- `.env.example` — `DATABASE_URL`, `REDIS_URL`, `PORT`, `JWT_SECRET`
+- `index.js` - minimal Express server on port 3000
+- `knexfile.js` - PostgreSQL connection config (localhost:5432)
+- `.env.example` - `DATABASE_URL`, `REDIS_URL`, `PORT`, `JWT_SECRET`
 - Must fingerprint as: node 18, postgresql, redis
 
 ### Day 5-6
@@ -304,8 +304,8 @@ Write test scripts:
 ### Day 9
 
 Package final submission:
-- `TeamID-devoir-shell.pdf` — collect from Person 3's report draft
-- `TeamID-devoir-shell.pptx` — collect from Ahmed's slide
+- `TeamID-devoir-shell.pdf` - collect from Person 3's report draft
+- `TeamID-devoir-shell.pptx` - collect from Ahmed's slide
 - All scripts with correct permissions (`chmod +x`)
 - Create `TeamID-devoir-shell.zip` with correct structure
 
@@ -318,13 +318,13 @@ Package final submission:
 - Create a feature branch for every task: `feature/logger`, `feature/fingerprint`, etc.
 - Commit frequently with clear messages: `feat: add log_message() with tee output`
 - Open a PR into `dev` when the feature is ready
-- Ahmed reviews and merges
+- XaMiNeZH & marwamachach reviews and merges
 
 ### Communication (everyone)
 
 - WhatsApp group for daily status updates
 - Post a message every evening: what you finished, what is blocked
-- If blocked for more than 2 hours, post immediately — do not wait
+- If blocked for more than 2 hours, post immediately - do not wait
 
 ### Commit message format
 
@@ -342,10 +342,10 @@ chore: <setup, config, packaging>
 
 These items block everything else. They must be done first, in order:
 
-1. **Ahmed** — repo structure, all empty files, first commit pushed
-2. **Person 2** — `core/logger.sh` with `log_message()` working and pushed
-3. **Ahmed** — `core/errors.sh` with `die()` and `show_help()` working
-4. **Ahmed** — `envctr` main script option parsing working
+1. **Ahmed** - repo structure, all empty files, first commit pushed
+2. Marwa - `core/logger.sh` with `log_message()` working and pushed
+3. **Ahmed** - `core/errors.sh` with `die()` and `show_help()` working
+4. **Ahmed** - `envctr` main script option parsing working
 
 Only after these four items are done can anyone else begin their features.
 Estimated time for the critical path: end of Day 2.
@@ -354,11 +354,11 @@ Estimated time for the critical path: end of Day 2.
 
 ## Risk Register
 
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| QEMU backend too complex in time | Medium | Low | QEMU is owned by Ahmed; Docker and chroot are enough for all three test scenarios. QEMU is a bonus. |
-| Beginner teammates blocked | High | Medium | Person 3 and Person 4 tasks are designed to not require understanding of the full system. If blocked, Ahmed unblocks immediately. |
-| Mistral API key issue | Low | Low | Feature degrades gracefully. Not in critical path. |
-| C helper compilation fails on teammate machines | Medium | Medium | Ahmed compiles and commits the binaries. Teammates don't need to compile. |
-| Log format not exact | Medium | High | Person 2 writes `logger.sh` first and Ahmed reviews it before anyone else uses it. |
-| Time runs out before PDF/PPTX | Medium | High | Person 3 starts the report outline on Day 7 alongside test writing. Do not leave to Day 9. |
+| Risk                                            | Likelihood | Impact | Mitigation                                                                                                                   |
+| ----------------------------------------------- | ---------- | ------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| QEMU backend too complex in time                | Medium     | Low    | QEMU is owned by Ahmed; Docker and chroot are enough for all three test scenarios. QEMU is a bonus.                          |
+| Beginner teammates blocked                      | High       | Medium | Yassine & Hicham tasks are designed to not require understanding of the full system. If blocked, Ahmed unblocks immediately. |
+| Mistral API key issue                           | Low        | Low    | Feature degrades gracefully. Not in critical path.                                                                           |
+| C helper compilation fails on teammate machines | Medium     | Medium | Ahmed compiles and commits the binaries. Teammates don't need to compile.                                                    |
+| Log format not exact                            | Medium     | High   | Marwa writes `logger.sh` first and Ahmed reviews it before anyone else uses it.                                              |
+| Time runs out before PDF/PPTX                   | Medium     | High   | Yassine starts the report outline on Day 7 alongside test writing. Do not leave to Day 9.                                    |

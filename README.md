@@ -1,16 +1,13 @@
 <div align="center">
 
 ```
-█████████████████████████████████████████████████████████████████
-█▌                                           █████             ▐█
-█▌                                          ░░███              ▐█
-█▌  ██████  ████████   █████ █████  ██████  ███████   ████████ ▐█
-█▌ ███░░███░░███░░███ ░░███ ░░███  ███░░███░░░███░   ░░███░░███▐█
-█▌░███████  ░███ ░███  ░███  ░███ ░███ ░░░   ░███     ░███ ░░░ ▐█
-█▌░███░░░   ░███ ░███  ░░███ ███  ░███  ███  ░███ ███ ░███     ▐█
-█▌░░██████  ████ █████  ░░█████   ░░██████   ░░█████  █████    ▐█
-█▌ ░░░░░░  ░░░░ ░░░░░    ░░░░░     ░░░░░░     ░░░░░  ░░░░░     ▐█
-█████████████████████████████████████████████████████████████████
+                                                    ,d                
+                                                    88                
+ ,adPPYba,  8b,dPPYba,   8b       d8   ,adPPYba,  MM88MMM  8b,dPPYba, 
+a8P_____88  88P'   `"8a  `8b     d8'  a8"     ""    88     88P'   "Y8 
+8PP"""""""  88       88   `8b   d8'   8b            88     88         
+"8b,   ,aa  88       88    `8b,d8'    "8a,   ,aa    88,    88         
+ `"Ybbd8"'  88       88      "8"       `"Ybbd8"'    "Y888  88         
 ```
 
 **Reproducible Developer Environment Provisioner & Drift Detector**
@@ -20,7 +17,7 @@
 [![Shell](https://img.shields.io/badge/shell-Bash%205.0+-green?style=flat)]()
 [![Language](https://img.shields.io/badge/language-Bash%20%2F%20C-orange?style=flat)]()
 [![Backends](https://img.shields.io/badge/backends-Docker%20%7C%20QEMU%20%7C%20chroot-informational?style=flat)]()
-[![LLM](https://img.shields.io/badge/LLM-Ollama-7C3AED?style=for-the-badge&logo=ollama&logoColor=white)](https://ollama.ai/)
+[![LLM](https://img.shields.io/badge/LLM-Mistral%20API-7C3AED?style=flat)]()
 
 <br/>
 
@@ -314,11 +311,11 @@ Drift is classified into three levels. Breaking means the project will likely no
 
 ---
 
-## Drift Explanation with Ollama
+## Drift Explanation with Mistral
 
-When the `-e` (explain) flag is combined with `--drift`, envctr pipes the drift report to a local Ollama model and returns a plain-language explanation of what broke, why it matters in the context of this project, and what to fix first.
+When the `-e` (explain) flag is combined with `--drift`, envctr pipes the drift report to the Mistral API and returns a plain-language explanation of what broke, why it matters in the context of this project, and what to fix first.
 
-This feature is strictly optional. envctr never requires Ollama to function. If Ollama is not running or not installed, envctr falls back to the raw drift report automatically and logs error code 110.
+This feature is strictly optional. envctr never requires Mistral to function. If the Mistral API is unreachable or the key is not set, envctr falls back to the raw drift report automatically and logs error code 110.
 
 The LLM is only invoked on the structured drift output — not on arbitrary input. It receives a diff and returns an explanation. It is never used for provisioning, fingerprinting, or any step in the critical path.
 
@@ -335,7 +332,7 @@ BREAKING  [runtime.version]  expected 18.17.1 -- found 20.1.0
 BREAKING  [services.redis]   expected 7.2.1   -- found NOT RUNNING
 WARNING   [ports.app]        expected 3000    -- found 4000
 
---- ollama explanation (mistral) ---
+--- mistral explanation ---
 Your environment has two critical issues that will prevent the
 application from starting.
 
@@ -355,7 +352,6 @@ setup still points to port 3000.
 Recommended fix: run envctr --restore to re-provision from lockfile.
 ```
 
-The explanation is generated locally — no data leaves the machine. Ollama runs entirely offline.
 
 ---
 
@@ -462,7 +458,7 @@ Every error produces a specific exit code and automatically displays the program
 | 107 | Provisioning failed — backend returned non-zero exit |
 | 108 | KVM not available (`/dev/kvm` missing or inaccessible) |
 | 109 | Drift detected — environment does not match lockfile |
-| 110 | Ollama unreachable — drift explanation unavailable, raw report shown |
+| 110 | Mistral API unreachable — drift explanation unavailable, raw report shown |
 
 ```
 $ envctr -p ./myproject
@@ -588,7 +584,7 @@ envctr --drift -e -p ./examples/microservices-monorepo
 ```
 envctr/
 |
-+-- envctr.sh                          <- Main script (entry point)
++-- envctr                          <- Main script (entry point)
 |
 +-- core/
 |   +-- fingerprint.sh                 <- Stack detection and dependency graph
@@ -629,8 +625,9 @@ DEFAULT_BACKEND  = docker
 DOCKER_NETWORK   = envctr-net
 QEMU_SSH_PORT    = 2222
 CHROOT_BASE_DIR  = /var/envctr/jails
-OLLAMA_URL       = http://localhost:11434/api/generate
-OLLAMA_MODEL     = mistral
+MISTRAL_API_KEY  = 
+MISTRAL_MODEL    = mistral-small-latest
+MISTRAL_API_URL  = https://api.mistral.ai/v1/chat/completions
 ```
 
 ---

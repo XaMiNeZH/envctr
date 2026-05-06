@@ -17,7 +17,7 @@ a8P_____88  88P'   `"8a  `8b     d8'  a8"     ""    88     88P'   "Y8
 [![Shell](https://img.shields.io/badge/shell-Bash%205.0+-green?style=flat)]()
 [![Language](https://img.shields.io/badge/language-Bash%20%2F%20C-orange?style=flat)]()
 [![Backends](https://img.shields.io/badge/backends-Docker%20%7C%20QEMU%20%7C%20chroot-informational?style=flat)]()
-[![LLM](https://img.shields.io/badge/LLM-Mistral%20API-7C3AED?style=flat)]()
+[![LLM](https://img.shields.io/badge/LLM-Mistral%20API-7C3AED?style=flat)](https://docs.mistral.ai/)
 
 <br/>
 

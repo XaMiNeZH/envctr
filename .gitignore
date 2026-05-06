@@ -4,3 +4,4 @@ helpers/thread_helper
 tests/tmp/
 *.log
 .env
+.obsidian/

@@ -255,22 +255,32 @@ write_lock_if_requested() {
 }
 
 detect_drift_if_requested() {
+    local drift_status=0
+
     if [[ "$DRIFT" != true ]]; then
         return 0
     fi
 
     if declare -F detect_drift >/dev/null; then
-        detect_drift "$PROJECT_DIR" || die "$ERR_DRIFT_DETECTED"
+        detect_drift "$PROJECT_DIR" || drift_status=$?
     else
         log_message "INFOS" "drift module not implemented yet" || true
     fi
 
-    if [[ "$EXPLAIN" == true ]]; then
+    if [[ "$drift_status" -ne 0 && "$drift_status" -ne "$ERR_DRIFT_DETECTED" ]]; then
+        die "$drift_status"
+    fi
+
+    if [[ "$EXPLAIN" == true && "$drift_status" -eq "$ERR_DRIFT_DETECTED" ]]; then
         if declare -F explain_drift >/dev/null; then
-            explain_drift "$PROJECT_DIR"
+            explain_drift "$PROJECT_DIR" || die "$ERR_MISTRAL_UNREACHABLE"
         else
             log_message "INFOS" "explain module not implemented yet" || true
         fi
+    fi
+
+    if [[ "$drift_status" -eq "$ERR_DRIFT_DETECTED" ]]; then
+        die "$ERR_DRIFT_DETECTED"
     fi
 }
 

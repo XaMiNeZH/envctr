@@ -8,6 +8,11 @@ fi
 
 generate_lock() {
     local PROJECT_DIR="$1"
+     local PROJECT_DIR="$1"  
++    if [[ -z "$PROJECT_DIR" || ! -d "$PROJECT_DIR" ]]; then  
++        log_message "ERROR" "Invalid project directory: $PROJECT_DIR" || true  
++        return 106  
++    fi  
     local LOCKFILE="$PROJECT_DIR/envctr.lock"
     local GENERATED_AT
     local GENERATED_BY
@@ -56,6 +61,10 @@ EOF
 
 parse_lock() {
     local PROJECT_DIR="$1"
+    +    if [[ -z "$PROJECT_DIR" ]]; then  
++        log_message "ERROR" "Missing project directory or lockfile path" || true  
++        return 106  
++    fi  
     local LOCKFILE="$PROJECT_DIR/envctr.lock"
 
     if [[ -f "$PROJECT_DIR" && "$(basename "$PROJECT_DIR")" == "envctr.lock" ]]; then
@@ -68,14 +77,20 @@ parse_lock() {
         return 106
     fi
 
-    LOCK_GENERATED_AT=$(grep -m1 -E '^generated_at[[:space:]]*=' "$LOCKFILE" | sed 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//' || true)
+    LOCK_GENERATED_AT=$(grep -m1 -E '^generated_at[[:space:]]*=' "$LOCKFILE" | sed 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//')
     LOCK_RUNTIME=$(grep -m1 -E '^language[[:space:]]*=' "$LOCKFILE" | sed 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//' || true)
     LOCK_VERSION=$(grep -m1 -E '^version[[:space:]]*=' "$LOCKFILE" | sed 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//' || true)
     LOCK_SERVICES=$(grep -A1 -E '^\[services\]' "$LOCKFILE" | grep -m1 -E '^detected[[:space:]]*=' | sed 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//' || true)
     LOCK_PORTS=$(grep -A1 -E '^\[ports\]' "$LOCKFILE" | grep -m1 -E '^detected[[:space:]]*=' | sed 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//' || true)
     LOCK_ENV_VARS=$(grep -m1 -E '^required_vars[[:space:]]*=' "$LOCKFILE" | sed 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//' || true)
-    LOCK_BACKEND=$(grep -m1 -E '^type[[:space:]]*=' "$LOCKFILE" | sed 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//' || true)
-
+    LOCK_BACKEND=$(grep -m1 -E '^type[[:space:]]*=' "$LOCKFILE" | sed 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//')
+    
+    if [[ -z "${LOCK_GENERATED_AT+x}" || -z "${LOCK_RUNTIME+x}" || -z "${LOCK_VERSION+x}" || \  
++          -z "${LOCK_SERVICES+x}" || -z "${LOCK_PORTS+x}" || -z "${LOCK_ENV_VARS+x}" || \  
++          -z "${LOCK_BACKEND+x}" ]]; then  
++        log_message "ERROR" "Lockfile is missing one or more required keys" || true  
++        return 106  
++    fi  
     export LOCK_RUNTIME LOCK_VERSION LOCK_SERVICES LOCK_PORTS LOCK_ENV_VARS LOCK_BACKEND LOCK_GENERATED_AT
 
     log_message "INFOS" "Lockfile parsed: $PROJECT_DIR/envctr.lock" || true

@@ -93,7 +93,7 @@ There is also a second layer to the problem: **drift**. Even after a project is 
 
 envctr gives the team a lightweight state contract for a project directory.
 
-**Fingerprint:** Scan files such as `package.json`, `requirements.txt`, `pyproject.toml`, `.env.example`, `Dockerfile`, `docker-compose.yml`, `go.mod`, `Cargo.toml`, and service config files. Export detected runtime, services, ports, and environment variable names.
+**Fingerprint:** Scan files such as `package.json`, `requirements.txt`, `pyproject.toml`, `.env.example`, `Dockerfile`, `go.mod`, `Cargo.toml`, and service config files. Export detected runtime, services, ports, and environment variable names.
 
 **Lock:** Write an `envctr.lock` file from the exported fingerprint variables. The lockfile captures the detected stack plus the selected backend label.
 
@@ -134,20 +134,18 @@ Detected languages and runtimes:
 | Signal File | Detected Stack |
 |---|---|
 | `package.json` | Node.js, including `engines.node` when present |
-| `requirements.txt` / `pyproject.toml` | Python, with version hints from `.python-version` or project metadata |
-| `Makefile` / `*.c` / `*.h` | C/C++ build target and compiler hints |
-| `pom.xml` / `build.gradle` | Java version hints |
-| `Cargo.toml` | Rust edition and `rust-version` |
-| `go.mod` | Go version from the `go` directive |
-| `Gemfile` | Ruby version declaration |
-| `composer.json` | PHP requirement from `require.php` |
+| `requirements.txt` / `pyproject.toml` | Python |
+| `Makefile` / `*.c` | C/C++ |
+| `pom.xml` / `build.gradle` | Java |
+| `Cargo.toml` | Rust |
+| `go.mod` | Go |
 
 Additional detected fields:
 
 - **Services:** database and cache hints from files such as `knexfile.js`, `database.yml`, `alembic.ini`, and config text containing service names.
-- **Ports:** values from `.env` files, config files, and source files using regex-based scans.
-- **Environment variables:** required variable names from `.env.example` and similar files. Values are not stored.
-- **Existing project metadata:** `Dockerfile` and `docker-compose.yml` are read as signals only.
+- **Ports:** `PORT=` values from `.env` or `.env.example`.
+- **Environment variables:** required variable names from `.env.example`. Values are not stored.
+- **Existing project metadata:** `Dockerfile` is read as a signal only.
 
 ---
 
@@ -257,7 +255,7 @@ This feature is optional. envctr works without a Mistral API key. If `MISTRAL_AP
 Example:
 
 ```bash
-envctr --drift -e -p ./myapi
+envctr --drift -e -b docker -p ./myapi
 ```
 
 Example output:
@@ -476,7 +474,7 @@ Simplified documentation is available through `-h`. Extended documentation and s
 
 ```bash
 envctr -b chroot -p ./examples/flask-simple -s
-envctr --drift -p ./examples/flask-simple -s
+envctr --drift -s -b chroot -p ./examples/flask-simple
 ```
 
 Expected behavior:
@@ -490,7 +488,7 @@ Expected behavior:
 
 ```bash
 envctr -b docker -p ./examples/node-api -f
-envctr --drift -p ./examples/node-api -f
+envctr --drift -f -b docker -p ./examples/node-api
 ```
 
 Expected behavior:
@@ -505,7 +503,7 @@ Expected behavior:
 
 ```bash
 envctr -b docker -p ./examples/microservices-monorepo -t
-envctr --drift -e -p ./examples/microservices-monorepo -t
+envctr --drift -e -t -b docker -p ./examples/microservices-monorepo
 ```
 
 Expected behavior:
@@ -579,7 +577,6 @@ Default configuration at `/etc/envctr/envctr.conf` or `configs/default.conf`:
 
 ```bash
 LOG_DIR="/var/log/envctr"
-DEFAULT_BACKEND="docker"
 MISTRAL_API_KEY=""
 MISTRAL_MODEL="mistral-small-latest"
 MISTRAL_API_URL="https://api.mistral.ai/v1/chat/completions"

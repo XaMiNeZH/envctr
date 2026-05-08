@@ -16,6 +16,7 @@ detect_drift() {
     local CURRENT_BACKEND
     local LOCK_ENV_COUNT
     local DETECTED_ENV_COUNT
+    local REPORT
     local BREAKING_LINES=()
     local WARNING_LINES=()
     local INFO_LINES=()
@@ -64,31 +65,38 @@ detect_drift() {
         HAS_DRIFT=1
     fi
 
-    printf 'envctr drift report -- %s\n' "$TIMESTAMP"
-    printf 'Project : %s\n' "$PROJECT_NAME"
-
     if [[ "$HAS_DRIFT" -eq 0 ]]; then
-        printf 'Status  : NO DRIFT DETECTED\n'
+        REPORT=$(printf 'envctr drift report -- %s\nProject : %s\nStatus  : NO DRIFT DETECTED\n' "$TIMESTAMP" "$PROJECT_NAME")
+        LAST_DRIFT_REPORT="$REPORT"
+        export LAST_DRIFT_REPORT
+        printf '%s\n' "$REPORT"
         return 0
     fi
 
-    printf 'Status  : DRIFT DETECTED\n'
+    REPORT=$(
+        printf 'envctr drift report -- %s\n' "$TIMESTAMP"
+        printf 'Project : %s\n' "$PROJECT_NAME"
+        printf 'Status  : DRIFT DETECTED\n'
 
-    if ((${#BREAKING_LINES[@]} > 0)); then
-        printf '\nBREAKING\n'
-        printf '%s\n' "${BREAKING_LINES[@]}"
-    fi
+        if ((${#BREAKING_LINES[@]} > 0)); then
+            printf '\nBREAKING\n'
+            printf '%s\n' "${BREAKING_LINES[@]}"
+        fi
 
-    if ((${#WARNING_LINES[@]} > 0)); then
-        printf '\nWARNING\n'
-        printf '%s\n' "${WARNING_LINES[@]}"
-    fi
+        if ((${#WARNING_LINES[@]} > 0)); then
+            printf '\nWARNING\n'
+            printf '%s\n' "${WARNING_LINES[@]}"
+        fi
 
-    if ((${#INFO_LINES[@]} > 0)); then
-        printf '\nINFO\n'
-        printf '%s\n' "${INFO_LINES[@]}"
-    fi
+        if ((${#INFO_LINES[@]} > 0)); then
+            printf '\nINFO\n'
+            printf '%s\n' "${INFO_LINES[@]}"
+        fi
+    )
 
+    LAST_DRIFT_REPORT="$REPORT"
+    export LAST_DRIFT_REPORT
+    printf '%s\n' "$REPORT"
     log_message "ERROR" "Drift detected in project: $PROJECT_DIR" || true
     return 109
 }

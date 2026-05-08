@@ -29,9 +29,9 @@ The backend option `-b` remains in the CLI, but it only records intended backend
 
 | Requirement | Status | Evidence | Notes |
 |---|---|---|---|
-| Automate standard Unix/Linux processes | Planned | `envctr_project_specification.md` | Automates fingerprinting, lockfile generation, drift detection, and optional explanation |
-| Address a real user need for developers or sysadmins | Planned | `README.md` | Captures project state and detects documentation drift |
-| Main shell script deliverable | Met | `envctr` | Met in PR #3, pending merge |
+| Automate standard Unix/Linux processes | Met | `envctr_project_specification.md` | Automates fingerprinting, lockfile generation, drift detection, and optional explanation |
+| Address a real user need for developers or sysadmins | Met | `README.md` | Captures project state and detects documentation drift |
+| Main shell script deliverable | Met | `envctr` | Implemented |
 | PDF report `TeamID-devoir-shell.pdf` | Missing | - | Due before 14/05/2026 |
 | One-slide PPTX `TeamID-devoir-shell.pptx` | Missing | - | Due before 14/05/2026 |
 | ZIP `TeamID-devoir-shell.zip` | Missing | - | Due before 14/05/2026 |
@@ -42,29 +42,29 @@ The backend option `-b` remains in the CLI, but it only records intended backend
 
 | Requirement | Status | Evidence | Notes |
 |---|---|---|---|
-| Developed primarily in Bash | Met | `envctr`, `core/*.sh`, `backends/*.sh` | Main script and shell modules are covered in PR #3; logger merged in PR #1 |
-| May call external Bash or C scripts | Met | `helpers/fork_helper.c`, `helpers/thread_helper.c` | Met in PR #3, pending merge |
-| `core/logger.sh` | Met | `core/logger.sh` | Merged in PR #1 |
-| `core/fingerprint.sh` | Met | `core/fingerprint.sh` | In PR #2, pending merge |
-| `core/errors.sh` | Met | `core/errors.sh` | In PR #3, pending merge |
-| Main `envctr` script | Met | `envctr` | In PR #3, pending merge |
-| `helpers/fork_helper.c` | Met | `helpers/fork_helper.c` | In PR #3, pending merge |
-| `helpers/thread_helper.c` | Met | `helpers/thread_helper.c` | In PR #3, pending merge |
-| `core/lock.sh` | Planned | `core/lock.sh` | Generates `envctr.lock` from exported fingerprint variables |
-| `core/drift.sh` | Planned | `core/drift.sh` | Compares lockfile fields against current fingerprint |
-| `core/explain.sh` | Planned | `core/explain.sh` | Calls Mistral API with drift report input |
-| Backend scripts | Planned | `backends/*.sh` | Simplified stubs; record intended backend only |
-| Unix/Linux commands | Planned | See section 2.1 | Final list depends on lock, drift, and explain implementations |
-| Conditions | Met | `envctr`, `core/errors.sh` | Option checks and error flow in PR #3, pending merge |
-| Loops | Met | `core/fingerprint.sh` | Fingerprint scans in PR #2, pending merge |
-| Functions | Met | `core/*.sh` | Logger merged; fingerprint/errors/main functions pending merge |
-| Environment variables | Planned | `configs/default.conf`, exported fingerprint variables | Mistral config kept; fingerprint exports in PR #2 |
-| Regular expressions | Met | `core/fingerprint.sh` | In PR #2, pending merge |
-| File manipulation | Planned | `core/lock.sh`, `core/drift.sh`, `core/logger.sh` | Logging met; lock/drift planned |
-| Search and filtering | Met | `core/fingerprint.sh` | In PR #2, pending merge |
-| Access control | Met | `core/errors.sh`, `envctr` | `-r` admin check in PR #3, pending merge |
-| Pipes and filters | Met | `core/fingerprint.sh`, `core/logger.sh` | Logger uses `tee`; fingerprint pipeline in PR #2 |
-| At least one mandatory parameter | Met | `envctr` | `-p <directory>` in PR #3, pending merge |
+| Developed primarily in Bash | Met | `envctr`, `core/*.sh`, `backends/*.sh` | Implemented |
+| May call external Bash or C scripts | Met | `helpers/fork_helper.c`, `helpers/thread_helper.c` | Implemented |
+| `core/logger.sh` | Met | `core/logger.sh` | Implemented |
+| `core/fingerprint.sh` | Met | `core/fingerprint.sh` | Implemented |
+| `core/errors.sh` | Met | `core/errors.sh` | Implemented |
+| Main `envctr` script | Met | `envctr` | Implemented |
+| `helpers/fork_helper.c` | Met | `helpers/fork_helper.c` | Implemented |
+| `helpers/thread_helper.c` | Met | `helpers/thread_helper.c` | Implemented |
+| `core/lock.sh` | Met | `core/lock.sh` | Generates `envctr.lock` from exported fingerprint variables |
+| `core/drift.sh` | Met | `core/drift.sh` | Compares lockfile fields against current fingerprint |
+| `core/explain.sh` | Met | `core/explain.sh` | Calls Mistral API with drift report input |
+| Backend scripts | Met | `backends/*.sh` | Simplified stubs record intended backend only |
+| Unix/Linux commands | Met | See section 2.1 | Used across fingerprint, lock, drift, explain, tests, and logging |
+| Conditions | Met | `envctr`, `core/errors.sh` | Option checks and error flow |
+| Loops | Met | `core/fingerprint.sh`, `core/lock.sh` | Fingerprint scans and lockfile entries |
+| Functions | Met | `core/*.sh`, `backends/*.sh` | Main pipeline and module functions |
+| Environment variables | Met | `configs/default.conf`, exported fingerprint variables | Mistral config and exported fingerprint variables |
+| Regular expressions | Met | `core/fingerprint.sh` | Runtime, ports, and env var scans |
+| File manipulation | Met | `core/lock.sh`, `core/drift.sh`, `core/logger.sh` | Logging and lockfile read/write |
+| Search and filtering | Met | `core/fingerprint.sh` | Project scans |
+| Access control | Met | `core/errors.sh`, `envctr` | `-r` admin check |
+| Pipes and filters | Met | `core/fingerprint.sh`, `core/logger.sh`, `core/explain.sh` | Logger uses `tee`; modules use shell filters |
+| At least one mandatory parameter | Met | `envctr` | `-p <directory>` |
 
 ### 2.1 Unix/Linux Commands Used
 
@@ -82,12 +82,12 @@ Docker, QEMU, and chroot are not implementation dependencies in the simplified s
 
 | Option | Required meaning | Status | Implementation | Notes |
 |---|---|---|---|---|
-| `-h` | Help / full documentation | Met | `show_help()` in `core/errors.sh` | In PR #3, pending merge |
-| `-f` | Fork execution | Met | `helpers/fork_helper.c` | In PR #3, pending merge; runs fingerprinting pipeline work |
-| `-t` | Thread execution | Met | `helpers/thread_helper.c` | In PR #3, pending merge; runs fingerprinting pipeline work |
-| `-s` | Subshell execution | Met | `( envctr_pipeline )` in `envctr` | In PR #3, pending merge |
-| `-l <dir>` | Custom log directory | Met | Overrides `LOG_DIR` | In PR #3, pending merge |
-| `-r` | Reset defaults, admin only | Met | `check_root()` guard | In PR #3, pending merge |
+| `-h` | Help / full documentation | Met | `show_help()` in `core/errors.sh` | Implemented |
+| `-f` | Fork execution | Met | `helpers/fork_helper.c` | Runs helper work through fork |
+| `-t` | Thread execution | Met | `helpers/thread_helper.c` | Runs helper work through pthreads |
+| `-s` | Subshell execution | Met | `( run_pipeline )` in `envctr` | Implemented |
+| `-l <dir>` | Custom log directory | Met | Overrides `LOG_DIR` | Implemented |
+| `-r` | Reset defaults, admin only | Met | `check_root()` guard | Implemented |
 
 **Note on `-f` and `-t`:** The C helpers remain part of the project. They now support parallel fingerprinting pipeline execution, not service provisioning.
 
@@ -111,11 +111,11 @@ Docker, QEMU, and chroot are not implementation dependencies in the simplified s
 
 | Requirement | Status | Evidence | Notes |
 |---|---|---|---|
-| Handles incorrect usage | Met | `die()` in `core/errors.sh` | In PR #3, pending merge |
-| Specific error codes | Met | `core/errors.sh` | In PR #3, pending merge |
-| Code 100 - unknown option | Met | `die 100` | In PR #3, pending merge |
-| Code 101 - missing parameter | Met | `die 101` | In PR #3, pending merge |
-| Help displayed after every triggered error | Met | `die()` calls `show_help()` | In PR #3, pending merge |
+| Handles incorrect usage | Met | `die()` in `core/errors.sh` | Implemented |
+| Specific error codes | Met | `core/errors.sh` | Implemented |
+| Code 100 - unknown option | Met | `die 100` | Implemented |
+| Code 101 - missing parameter | Met | `die 101` | Implemented |
+| Help displayed after every triggered error | Met | `die()` calls `show_help()` | Implemented |
 
 ---
 
@@ -123,11 +123,11 @@ Docker, QEMU, and chroot are not implementation dependencies in the simplified s
 
 | Feature | Status | Evidence | Notes |
 |---|---|---|---|
-| Fingerprint | Met | `core/fingerprint.sh` | In PR #2, pending merge |
-| Lock | Planned | `core/lock.sh` | To be implemented after PR #2 merge |
-| Drift | Planned | `core/drift.sh` | To be implemented after lockfile format is stable |
-| Explain | Planned | `core/explain.sh` | Mistral API via `curl`; depends on drift report |
-| Backend recording | Planned | `backends/*.sh` | Stubs log backend selection and exit `0` |
+| Fingerprint | Met | `core/fingerprint.sh` | Implemented |
+| Lock | Met | `core/lock.sh` | Implemented |
+| Drift | Met | `core/drift.sh` | Implemented |
+| Explain | Met | `core/explain.sh` | Mistral API via `curl`; depends on drift report |
+| Backend recording | Met | `backends/*.sh` | Stubs log backend selection and return `0` |
 
 ---
 
@@ -135,14 +135,14 @@ Docker, QEMU, and chroot are not implementation dependencies in the simplified s
 
 | Requirement | Status | Evidence | Notes |
 |---|---|---|---|
-| Standard syntax `program [options] [parameter]` | Met | `envctr [options] -b <backend> -p <directory>` | In PR #3, pending merge |
-| Light scenario | Planned | `tests/test_light.sh` | `flask-simple`; fingerprint + lock + drift under `-s` |
-| Medium scenario | Planned | `tests/test_medium.sh` | `node-api`; fingerprint + lock + drift under `-f` |
-| Heavy scenario | Planned | `tests/test_heavy.sh` | `microservices-monorepo`; fingerprint + lock + drift under `-t` |
-| Aggregate test runner | Planned | `tests/run_all.sh` | Runs light, medium, and heavy tests |
-| Subshell evaluation | Planned | `test_light.sh` | Demonstrates `-s` |
-| Fork evaluation | Planned | `test_medium.sh` | Demonstrates `-f` and fork helper |
-| Thread evaluation | Planned | `test_heavy.sh` | Demonstrates `-t` and pthread helper |
+| Standard syntax `program [options] [parameter]` | Met | `envctr [options] -b <backend> -p <directory>` | Implemented |
+| Light scenario | Met | `tests/test_light.sh` | `flask-simple`; fingerprint + lock + drift under `-s` |
+| Medium scenario | Met | `tests/test_medium.sh` | `node-api`; fingerprint + lock + drift under `-f` |
+| Heavy scenario | Met | `tests/test_heavy.sh` | `microservices-monorepo`; fingerprint + lock + drift under `-t` |
+| Aggregate test runner | Met | `tests/run_all.sh` | Runs light, medium, and heavy tests |
+| Subshell evaluation | Met | `test_light.sh` | Demonstrates `-s` |
+| Fork evaluation | Met | `test_medium.sh` | Demonstrates `-f` and fork helper |
+| Thread evaluation | Met | `test_heavy.sh` | Demonstrates `-t` and pthread helper |
 
 ---
 
@@ -150,7 +150,7 @@ Docker, QEMU, and chroot are not implementation dependencies in the simplified s
 
 | Requirement | Status | Notes |
 |---|---|---|
-| Internal `-h` documentation | Met | In PR #3, pending merge |
+| Internal `-h` documentation | Met | `show_help()` in `core/errors.sh` |
 | `README.md` | Met | Updated for simplified scope |
 | `envctr_project_specification.md` | Met | Updated for simplified scope |
 | `TASK_REPARTITION.md` | Met | Updated for remaining work |

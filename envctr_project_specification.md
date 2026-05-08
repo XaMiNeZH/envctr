@@ -257,39 +257,39 @@ type = docker
 
 | Requirement | Status | Notes |
 |---|---|---|
-| Main Bash script | Met | In PR #3, pending merge |
-| At least one mandatory parameter | Met | `-p <directory>` in PR #3, pending merge |
-| Six mandatory options | Met | `-h -f -t -s -l -r` in PR #3, pending merge |
-| `-h` help | Met | `show_help()` in PR #3, pending merge |
-| `-f` fork | Met | `fork_helper.c` in PR #3, pending merge |
-| `-t` thread | Met | `thread_helper.c` in PR #3, pending merge |
-| `-s` subshell | Met | In PR #3, pending merge |
-| `-l` log dir | Met | In PR #3, pending merge |
-| `-r` reset, root only | Met | Admin guard in PR #3, pending merge |
+| Main Bash script | Met | `envctr` |
+| At least one mandatory parameter | Met | `-p <directory>` |
+| Six mandatory options | Met | `-h -f -t -s -l -r` |
+| `-h` help | Met | `show_help()` |
+| `-f` fork | Met | `fork_helper.c` |
+| `-t` thread | Met | `thread_helper.c` |
+| `-s` subshell | Met | Implemented in `envctr` |
+| `-l` log dir | Met | Overrides `LOG_DIR` |
+| `-r` reset, root only | Met | Admin guard in `check_root()` |
 | Logger | Met | Merged in PR #1 |
-| Fingerprint | Met | `core/fingerprint.sh` in PR #2, pending merge |
-| Lock | Planned | `core/lock.sh` |
-| Drift | Planned | `core/drift.sh` |
-| Explain | Planned | `core/explain.sh` with Mistral API |
-| Backend scripts | Planned | Stubs record intended backend only |
+| Fingerprint | Met | `core/fingerprint.sh` |
+| Lock | Met | `core/lock.sh` |
+| Drift | Met | `core/drift.sh` |
+| Explain | Met | `core/explain.sh` with Mistral API |
+| Backend scripts | Met | Stubs record intended backend only |
 | Conditions | Met | Option and error handling in PR #3 |
 | Loops | Met | Fingerprint scanning in PR #2 |
 | Functions | Met | Logger merged; CLI/fingerprint/errors in PR #2/#3 |
-| Environment variables | Planned | Mistral config and exported fingerprint variables |
+| Environment variables | Met | Mistral config and exported fingerprint variables |
 | Regular expressions | Met | `core/fingerprint.sh` in PR #2 |
-| File manipulation | Planned | Logging met; lockfile read/write planned |
+| File manipulation | Met | Logging and lockfile read/write |
 | Search and filtering | Met | `core/fingerprint.sh` in PR #2 |
 | Access control | Met | `-r` admin guard in PR #3 |
 | Pipes and filters | Met | Logger merged; fingerprint pipeline in PR #2 |
 | Log to terminal + file simultaneously | Met | `core/logger.sh`, merged in PR #1 |
 | Log path `/var/log/envctr/history.log` | Met | `core/logger.sh`, merged in PR #1 |
 | Log format exact match | Met | `core/logger.sh`, merged in PR #1 |
-| Error codes | Met | `core/errors.sh` in PR #3, pending merge |
-| Help after every error | Met | `die()` in PR #3, pending merge |
-| Light scenario | Planned | `tests/test_light.sh`; `flask-simple`; fingerprint + lock + drift |
-| Medium scenario | Planned | `tests/test_medium.sh`; `node-api`; fingerprint + lock + drift |
-| Heavy scenario | Planned | `tests/test_heavy.sh`; `microservices-monorepo`; fingerprint + lock + drift |
-| External C scripts | Met | `fork_helper.c`, `thread_helper.c` in PR #3, pending merge |
+| Error codes | Met | `core/errors.sh` |
+| Help after every error | Met | `die()` |
+| Light scenario | Met | `tests/test_light.sh`; `flask-simple`; fingerprint + lock + drift |
+| Medium scenario | Met | `tests/test_medium.sh`; `node-api`; fingerprint + lock + drift |
+| Heavy scenario | Met | `tests/test_heavy.sh`; `microservices-monorepo`; fingerprint + lock + drift |
+| External C scripts | Met | `fork_helper.c`, `thread_helper.c` |
 | PDF report | Missing | `TeamID-devoir-shell.pdf` |
 | PPTX one slide | Missing | `TeamID-devoir-shell.pptx` |
 | ZIP submission | Missing | `TeamID-devoir-shell.zip` |

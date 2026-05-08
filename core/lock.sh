@@ -8,10 +8,10 @@ fi
 
 generate_lock() {
     local PROJECT_DIR="$1"
-+    if [[ -z "$PROJECT_DIR" || ! -d "$PROJECT_DIR" ]]; then  
-+        log_message "ERROR" "Invalid project directory: $PROJECT_DIR" || true  
-+        return 106  
-+    fi  
+    if [[ -z "$PROJECT_DIR" || ! -d "$PROJECT_DIR" ]]; then  
+        log_message "ERROR" "Invalid project directory: $PROJECT_DIR" || true  
+        return 106  
+    fi  
     local LOCKFILE="$PROJECT_DIR/envctr.lock"
     local GENERATED_AT
     local GENERATED_BY
@@ -60,10 +60,10 @@ EOF
 
 parse_lock() {
     local PROJECT_DIR="$1"
-    +    if [[ -z "$PROJECT_DIR" ]]; then  
-+        log_message "ERROR" "Missing project directory or lockfile path" || true  
-+        return 106  
-+    fi  
+     if [[ -z "$PROJECT_DIR" ]]; then  
+        log_message "ERROR" "Missing project directory or lockfile path" || true  
+        return 106  
+     fi  
     local LOCKFILE="$PROJECT_DIR/envctr.lock"
 
     if [[ -f "$PROJECT_DIR" && "$(basename "$PROJECT_DIR")" == "envctr.lock" ]]; then

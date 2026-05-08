@@ -13,7 +13,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 ENVCTR="$ROOT_DIR/envctr"
-PROJECT="$ROOT_DIR/examples/microservices-monorepo"
+SOURCE_PROJECT="$ROOT_DIR/examples/microservices-monorepo"
+PROJECT="$SCRIPT_DIR/tmp/projects/microservices-monorepo"
 LOG_DIR="$SCRIPT_DIR/tmp/logs/heavy"
 LOCKFILE="$PROJECT/envctr.lock"
 RUNNER_DIR="$SCRIPT_DIR/tmp/envctr-runner-heavy"
@@ -21,8 +22,7 @@ RUNNER="$RUNNER_DIR/envctr"
 export LOG_DIR
 
 cleanup() {
-    rm -f "$LOCKFILE"
-    rm -rf "$RUNNER_DIR"
+    rm -rf "$PROJECT" "$RUNNER_DIR"
 }
 trap cleanup EXIT
 
@@ -52,14 +52,23 @@ prepare_runner() {
     done
 }
 
+prepare_project() {
+    rm -rf "$PROJECT"
+    mkdir -p "$(dirname "$PROJECT")"
+    cp -R "$SOURCE_PROJECT" "$PROJECT"
+    find "$PROJECT" -type f -exec sed -i 's/\r$//' {} +
+}
+
 mkdir -p "$LOG_DIR"
 prepare_runner
+prepare_project
 
 echo ""
 echo "========================================"
 echo " Test Scenario 3 — Heavy (threads)"
 echo "========================================"
 echo " Project : $PROJECT"
+echo " Source  : $SOURCE_PROJECT"
 echo " Mode    : thread (-t)"
 echo " Backend : docker (-b docker)"
 echo " Ref     : directive 3.2.4 — heavy workload"
@@ -99,15 +108,12 @@ fi
 echo ""
 echo "--- Phase 2: Drift detection ---"
 set +e
-bash "$RUNNER" -b docker --drift -p "$PROJECT" -l "$LOG_DIR"
+bash "$RUNNER" --drift -t -b docker -p "$PROJECT" -l "$LOG_DIR"
 DRIFT_CODE=$?
 set -e
 
 if [[ $DRIFT_CODE -eq 0 ]]; then
     echo "[PASS] No drift detected — environment matches lockfile"
-elif [[ $DRIFT_CODE -eq 109 ]]; then
-    echo "[INFO] Drift detected — see report above"
-    echo "[PASS] Drift detection ran successfully"
 else
     echo "[FAIL] Drift detection failed with exit code $DRIFT_CODE"
     exit 1

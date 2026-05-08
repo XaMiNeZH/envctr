@@ -12,7 +12,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 ENVCTR="$ROOT_DIR/envctr"
-PROJECT="$ROOT_DIR/examples/node-api"
+SOURCE_PROJECT="$ROOT_DIR/examples/node-api"
+PROJECT="$SCRIPT_DIR/tmp/projects/node-api"
 LOG_DIR="$SCRIPT_DIR/tmp/logs/medium"
 LOCKFILE="$PROJECT/envctr.lock"
 RUNNER_DIR="$SCRIPT_DIR/tmp/envctr-runner-medium"
@@ -20,8 +21,7 @@ RUNNER="$RUNNER_DIR/envctr"
 export LOG_DIR
 
 cleanup() {
-    rm -f "$LOCKFILE"
-    rm -rf "$RUNNER_DIR"
+    rm -rf "$PROJECT" "$RUNNER_DIR"
 }
 trap cleanup EXIT
 
@@ -51,14 +51,23 @@ prepare_runner() {
     done
 }
 
+prepare_project() {
+    rm -rf "$PROJECT"
+    mkdir -p "$(dirname "$PROJECT")"
+    cp -R "$SOURCE_PROJECT" "$PROJECT"
+    find "$PROJECT" -type f -exec sed -i 's/\r$//' {} +
+}
+
 mkdir -p "$LOG_DIR"
 prepare_runner
+prepare_project
 
 echo ""
 echo "========================================"
 echo " Test Scenario 2 — Medium (fork)"
 echo "========================================"
 echo " Project : $PROJECT"
+echo " Source  : $SOURCE_PROJECT"
 echo " Mode    : fork (-f)"
 echo " Backend : docker (-b docker)"
 echo " Ref     : directive 3.2.4 — medium workload"
@@ -95,6 +104,19 @@ if [[ -f "$LOCKFILE" ]]; then
     echo "-------------------------"
 else
     echo "[FAIL] Lockfile not found at: $LOCKFILE"
+    exit 1
+fi
+
+# Check drift
+set +e
+bash "$RUNNER" --drift -f -b docker -p "$PROJECT" -l "$LOG_DIR"
+DRIFT_CODE=$?
+set -e
+
+if [[ $DRIFT_CODE -eq 0 ]]; then
+    echo "[PASS] No drift detected — environment matches lockfile"
+else
+    echo "[FAIL] Drift detection failed with exit code $DRIFT_CODE"
     exit 1
 fi
 

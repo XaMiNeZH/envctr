@@ -10,3 +10,5 @@ product-service, order-service, notification-service
 ```bash
 envctr -t -b docker -p ./examples/microservices-monorepo
 ```
+
+In this simplified example, `-b docker` only records backend intent; Docker is not required and changing `-b` only changes metadata.

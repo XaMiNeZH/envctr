@@ -4,15 +4,19 @@ ERR_UNKNOWN_OPT=100
 ERR_MISSING_PARAM=101
 ERR_DIR_NOT_FOUND=102
 ERR_PERMISSION_DENIED=103
-ERR_BACKEND_UNAVAILABLE=104
+ERR_UNSUPPORTED_BACKEND=104
 ERR_FINGERPRINT_FAILED=105
 ERR_LOCKFILE_INVALID=106
 ERR_PROVISION_FAILED=107
-ERR_KVM_UNAVAILABLE=108
+ERR_LEGACY_BACKEND_CHECK=108
 ERR_DRIFT_DETECTED=109
 ERR_MISTRAL_UNREACHABLE=110
 ERR_RESET_NO_ROOT=111
-ERR_BACKEND_NOT_FOUND=112
+ERR_REQUIRED_HELPER_NOT_FOUND=112
+
+ERR_BACKEND_UNAVAILABLE="$ERR_UNSUPPORTED_BACKEND"
+ERR_KVM_UNAVAILABLE="$ERR_LEGACY_BACKEND_CHECK"
+ERR_BACKEND_NOT_FOUND="$ERR_REQUIRED_HELPER_NOT_FOUND"
 
 error_message() {
     local code="$1"
@@ -30,8 +34,8 @@ error_message() {
         "$ERR_PERMISSION_DENIED")
             printf '%s\n' "permission denied"
             ;;
-        "$ERR_BACKEND_UNAVAILABLE")
-            printf '%s\n' "backend unavailable"
+        "$ERR_UNSUPPORTED_BACKEND")
+            printf '%s\n' "unsupported backend label"
             ;;
         "$ERR_FINGERPRINT_FAILED")
             printf '%s\n' "fingerprint failed"
@@ -40,10 +44,10 @@ error_message() {
             printf '%s\n' "lockfile not found or invalid"
             ;;
         "$ERR_PROVISION_FAILED")
-            printf '%s\n' "provisioning failed"
+            printf '%s\n' "lockfile write failed or backend stub failed"
             ;;
-        "$ERR_KVM_UNAVAILABLE")
-            printf '%s\n' "KVM unavailable"
+        "$ERR_LEGACY_BACKEND_CHECK")
+            printf '%s\n' "legacy backend availability check reserved"
             ;;
         "$ERR_DRIFT_DETECTED")
             printf '%s\n' "drift detected"
@@ -54,8 +58,8 @@ error_message() {
         "$ERR_RESET_NO_ROOT")
             printf '%s\n' "reset requires root privileges"
             ;;
-        "$ERR_BACKEND_NOT_FOUND")
-            printf '%s\n' "backend binary not found"
+        "$ERR_REQUIRED_HELPER_NOT_FOUND")
+            printf '%s\n' "required helper script or binary not found"
             ;;
         *)
             printf '%s\n' "unknown error"
@@ -74,9 +78,9 @@ SYNOPSIS
        envctr [options] -b <backend> -p <project_directory>
 
 DESCRIPTION
-       envctr fingerprints a project directory, provisions an isolated runtime,
-       writes an envctr.lock file, and can later compare the live environment
-       against the lockfile to detect drift.
+       envctr fingerprints a project directory, writes an envctr.lock file,
+       and can later compare current project metadata against the lockfile to
+       detect drift.
 
        The execution pipeline is:
 
@@ -84,11 +88,11 @@ DESCRIPTION
 
 REQUIRED OPTIONS
        -b <backend>
-              Select the isolation backend. Supported values are docker, qemu,
-              and chroot.
+              Record backend intent in the lockfile. Supported values are
+              docker, qemu, and chroot.
 
        -p <project_directory>
-              Select the project directory to inspect and provision.
+              Select the project directory to inspect.
 
 GENERAL OPTIONS
        -h
@@ -109,12 +113,12 @@ EXECUTION MODES
               Run the pipeline inside a Bash subshell.
 
        -f
-              Run service provisioning commands through helpers/fork_helper.
-              The helper creates one child process per command with fork(2).
+              Run helper work through helpers/fork_helper. The helper creates
+              one child process per command with fork(2).
 
        -t
-              Run service provisioning commands through helpers/thread_helper.
-              The helper creates one POSIX thread per command.
+              Run helper work through helpers/thread_helper. The helper
+              creates one POSIX thread per command.
 
 STATE AND LOCKFILE OPTIONS
        --from-lock
@@ -128,62 +132,57 @@ STATE AND LOCKFILE OPTIONS
               differences.
 
        --restore
-              Restore the environment from lockfile state when the selected
-              backend supports restoration.
+              Reserved for lockfile-based restoration workflows.
 
        --dry-run
-              Print and log the planned actions without provisioning.
+              Print and log the planned actions without backend recording.
 
        --export
               Export the detected environment metadata when the export module
               is available.
 
        --no-provision
-              Fingerprint and lock the project without starting backend
-              resources.
+              Fingerprint and lock the project without recording backend work.
 
 RESET OPTION
        -r
-              Reset envctr.conf to defaults and destroy provisioned resources.
-              This option requires root privileges.
+              Reset envctr.conf to defaults. This option requires root
+              privileges.
 
 BACKENDS
        docker
-              Uses Docker containers and the envctr-net network. This backend
-              is suitable for common application stacks and service containers.
+              Metadata label for teams that intend to use Docker externally.
 
        qemu
-              Uses QEMU/KVM to boot a full virtual machine with its own Linux
-              kernel. KVM access is required for accelerated execution.
+              Metadata label for teams that intend to use QEMU externally.
 
        chroot
-              Uses a Linux chroot jail. This backend is useful on minimal
-              systems where Docker is unavailable.
+              Metadata label for teams that intend to use chroot externally.
 
 ERROR CODES
        100    Unknown option.
        101    Missing required parameter.
        102    Project directory not found.
        103    Permission denied.
-       104    Backend unavailable.
+       104    Unsupported backend label.
        105    Fingerprinting failed.
        106    Lockfile not found or invalid.
-       107    Provisioning failed.
-       108    KVM unavailable.
+       107    Lockfile write failed or backend stub returned non-zero.
+       108    Reserved for legacy backend availability checks.
        109    Drift detected.
        110    Mistral API unreachable.
        111    Reset requires root privileges.
-       112    Backend binary not found.
+       112    Required helper script or binary not found.
 
 EXAMPLES
        envctr -s -b chroot -p ./examples/flask-simple
               Run a light project in subshell mode with the chroot backend.
 
        envctr -f -b docker -p ./examples/node-api
-              Provision a medium project with fork-based parallel execution.
+              Fingerprint a medium project with fork-based helper execution.
 
        envctr -t -b docker -p ./examples/microservices-monorepo
-              Provision a heavy multi-service project with pthread execution.
+              Fingerprint a heavy project with pthread helper execution.
 
        envctr --drift -e -b docker -p ./myproject
               Detect drift and request a plain-language explanation.

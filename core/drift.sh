@@ -5,11 +5,17 @@ source "$CORE_DIR/logger.sh"
 source "$CORE_DIR/fingerprint.sh"
 source "$CORE_DIR/lock.sh"
 
+# detect_drift PROJECT_DIR
+# Compares the saved lockfile metadata with a fresh project fingerprint.
+# Returns 0 when clean, 109 for drift, 106 for lock errors, and 105 for fingerprint errors.
 detect_drift() {
     local PROJECT_DIR="$1"
     local PROJECT_NAME
     local TIMESTAMP
     local HAS_DRIFT=0
+    local CURRENT_BACKEND
+    local LOCK_ENV_COUNT
+    local DETECTED_ENV_COUNT
     local BREAKING_LINES=()
     local WARNING_LINES=()
     local INFO_LINES=()
@@ -24,6 +30,7 @@ detect_drift() {
 
     PROJECT_NAME=$(basename "$PROJECT_DIR")
     TIMESTAMP=$(date +"%Y-%m-%d-%H-%M-%S")
+    CURRENT_BACKEND="${DETECTED_BACKEND:-${BACKEND:-}}"
 
     if [[ "$DETECTED_RUNTIME" != "$LOCK_RUNTIME" ]]; then
         BREAKING_LINES+=("  [runtime]  expected $LOCK_RUNTIME -- found $DETECTED_RUNTIME")
@@ -45,8 +52,15 @@ detect_drift() {
         HAS_DRIFT=1
     fi
 
+    if [[ -n "$CURRENT_BACKEND" && "$CURRENT_BACKEND" != "$LOCK_BACKEND" ]]; then
+        WARNING_LINES+=("  [backend]  expected $LOCK_BACKEND -- found $CURRENT_BACKEND")
+        HAS_DRIFT=1
+    fi
+
     if [[ "$DETECTED_ENV_VARS" != "$LOCK_ENV_VARS" ]]; then
-        INFO_LINES+=("  [environment]  expected $LOCK_ENV_VARS -- found $DETECTED_ENV_VARS")
+        LOCK_ENV_COUNT=$(awk -F',' '{ print ($0 == "" ? 0 : NF) }' <<< "$LOCK_ENV_VARS")
+        DETECTED_ENV_COUNT=$(awk -F',' '{ print ($0 == "" ? 0 : NF) }' <<< "$DETECTED_ENV_VARS")
+        INFO_LINES+=("  [environment]  expected $LOCK_ENV_COUNT variables -- found $DETECTED_ENV_COUNT variables (details redacted)")
         HAS_DRIFT=1
     fi
 

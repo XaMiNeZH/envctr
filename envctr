@@ -214,7 +214,7 @@ load_lock_if_requested() {
 
 fingerprint_project() {
     if declare -F fingerprint >/dev/null; then
-        fingerprint "$PROJECT_DIR"
+        fingerprint "$PROJECT_DIR" || die "$ERR_FINGERPRINT_FAILED"
     else
         log_message "INFOS" "fingerprint module not implemented yet" || true
     fi
@@ -234,7 +234,7 @@ provision_backend() {
     fi
 
     if declare -F "$provision_function" >/dev/null; then
-        "$provision_function" "$PROJECT_DIR"
+        "$provision_function" "$PROJECT_DIR" || die "$ERR_PROVISION_FAILED"
     else
         log_message "INFOS" "backend function $provision_function not implemented yet" || true
     fi
@@ -260,7 +260,7 @@ detect_drift_if_requested() {
     fi
 
     if declare -F detect_drift >/dev/null; then
-        detect_drift "$PROJECT_DIR"
+        detect_drift "$PROJECT_DIR" || die "$ERR_DRIFT_DETECTED"
     else
         log_message "INFOS" "drift module not implemented yet" || true
     fi

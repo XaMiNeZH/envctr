@@ -93,7 +93,7 @@ parse_lock() {
     grep -qE '^required_vars[[:space:]]*=' "$LOCKFILE" || missing_keys+=("required_vars")  
     grep -qE '^type[[:space:]]*=' "$LOCKFILE" || missing_keys+=("type")  
   
-    if ((${`#missing_keys`[@]} > 0)); then
+    if ((${#missing_keys[@]} > 0)); then
         log_message "ERROR" "Lockfile is missing required keys: ${missing_keys[*]}" || true   
         return 106  
     fi  

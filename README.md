@@ -234,8 +234,8 @@ INFO
 
 Resolution options:
   envctr -b docker -p .              regenerate lockfile after review
-  envctr --drift -p .                inspect raw drift report
-  envctr --drift -e -p .             explain report with Mistral API
+  envctr -b docker --drift -p .                inspect raw drift report
+  envctr -b docker --drift -e -p .             explain report with Mistral API
 ```
 
 Severity levels:

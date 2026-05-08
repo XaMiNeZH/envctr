@@ -1,0 +1,8 @@
+{
+  "name": "api-gateway",
+  "version": "1.0.0",
+  "description": "API gateway service",
+  "engines": { "node": "18" },
+  "main": "index.js",
+  "scripts": { "start": "node index.js" }
+}

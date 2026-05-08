@@ -60,10 +60,10 @@ EOF
 
 parse_lock() {
     local PROJECT_DIR="$1"
-     if [[ -z "$PROJECT_DIR" ]]; then  
+    if [[ -z "$PROJECT_DIR" ]]; then  
         log_message "ERROR" "Missing project directory or lockfile path" || true  
         return 106  
-     fi  
+    fi  
     local LOCKFILE="$PROJECT_DIR/envctr.lock"
 
     if [[ -f "$PROJECT_DIR" && "$(basename "$PROJECT_DIR")" == "envctr.lock" ]]; then
@@ -93,7 +93,7 @@ parse_lock() {
     grep -qE '^required_vars[[:space:]]*=' "$LOCKFILE" || missing_keys+=("required_vars")  
     grep -qE '^type[[:space:]]*=' "$LOCKFILE" || missing_keys+=("type")  
   
-    if ((${`#missing_keys`[@]} > 0)); then  
+    if ((${`#missing_keys`[@]} > 0)); then
         log_message "ERROR" "Lockfile is missing required keys: ${missing_keys[*]}" || true   
         return 106  
     fi  

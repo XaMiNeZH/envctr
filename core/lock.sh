@@ -83,11 +83,18 @@ parse_lock() {
     LOCK_PORTS=$(grep -A1 -E '^\[ports\]' "$LOCKFILE" | grep -m1 -E '^detected[[:space:]]*=' | sed 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//' || true)
     LOCK_ENV_VARS=$(grep -m1 -E '^required_vars[[:space:]]*=' "$LOCKFILE" | sed 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//' || true)
     LOCK_BACKEND=$(grep -m1 -E '^type[[:space:]]*=' "$LOCKFILE" | sed 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//'|| true)
-    
-    if [[ -z "$LOCK_GENERATED_AT" || -z "$LOCK_RUNTIME" || -z "$LOCK_VERSION" || \
-          -z "$LOCK_SERVICES" || -z "$LOCK_PORTS" || -z "$LOCK_ENV_VARS" || \
-          -z "$LOCK_BACKEND" ]]; then  
-        log_message "ERROR" "Lockfile is missing one or more required keys" || true  
+   
+    local missing_keys=()  
+    grep -qE '^generated_at[[:space:]]*=' "$LOCKFILE" || missing_keys+=("generated_at")  
+    grep -qE '^language[[:space:]]*=' "$LOCKFILE" || missing_keys+=("language")  
+    grep -qE '^version[[:space:]]*=' "$LOCKFILE" || missing_keys+=("version")  
+    grep -A1 -E '^\[services\]' "$LOCKFILE" | grep -qE '^detected[[:space:]]*=' || missing_keys+=("services.detected")  
+    grep -A1 -E '^\[ports\]' "$LOCKFILE" | grep -qE '^detected[[:space:]]*=' || missing_keys+=("ports.detected")  
+    grep -qE '^required_vars[[:space:]]*=' "$LOCKFILE" || missing_keys+=("required_vars")  
+    grep -qE '^type[[:space:]]*=' "$LOCKFILE" || missing_keys+=("type")  
+  
+    if ((${`#missing_keys`[@]} > 0)); then  
+        log_message "ERROR" "Lockfile is missing required keys: ${missing_keys[*]}" || true   
         return 106  
     fi  
     export LOCK_RUNTIME LOCK_VERSION LOCK_SERVICES LOCK_PORTS LOCK_ENV_VARS LOCK_BACKEND LOCK_GENERATED_AT

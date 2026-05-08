@@ -84,8 +84,7 @@ parse_lock() {
     LOCK_ENV_VARS=$(grep -m1 -E '^required_vars[[:space:]]*=' "$LOCKFILE" | sed 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//' || true)
     LOCK_BACKEND=$(grep -m1 -E '^type[[:space:]]*=' "$LOCKFILE" | sed 's/^[^=]*=[[:space:]]*//; s/[[:space:]]*$//'|| true)
     
-    if [[ -z "$LOCK_GENERATED_AT" || -z "$LOCK_RUNTIME" || -z "$LOCK_VERSION" || \  
-          -z "$LOCK_SERVICES" || -z "$LOCK_PORTS" || -z "$LOCK_ENV_VARS" || \  
+    if [[ -z "$LOCK_GENERATED_AT" || -z "$LOCK_RUNTIME" || -z "$LOCK_VERSION" || \ -z "$LOCK_SERVICES" || -z "$LOCK_PORTS" || -z "$LOCK_ENV_VARS" || \  
           -z "$LOCK_BACKEND" ]]; then  
         log_message "ERROR" "Lockfile is missing one or more required keys" || true  
         return 106  

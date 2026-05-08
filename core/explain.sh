@@ -1,10 +1,7 @@
 #!/bin/bash
 
-if [[ -f "core/logger.sh" ]]; then
-    source "core/logger.sh"
-else
-    source "$(dirname "${BASH_SOURCE[0]}")/logger.sh"
-fi
+EXPLAIN_SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "${EXPLAIN_SCRIPT_DIR}/logger.sh"
 
 MISTRAL_MODEL="${MISTRAL_MODEL:-mistral-small-latest}"
 MISTRAL_API_URL="${MISTRAL_API_URL:-https://api.mistral.ai/v1/chat/completions}"
@@ -15,6 +12,11 @@ explain_drift() {
     local RESPONSE
     local EXPLANATION
     local PROMPT
+
+    if [[ -z "${1:-}" ]]; then
+        log_message "ERROR" "No drift report content provided"
+        return 110
+    fi
 
     if [[ -z "${MISTRAL_API_KEY:-}" ]]; then
         log_message "ERROR" "Mistral API key not set -- set MISTRAL_API_KEY in envctr.conf"
@@ -41,7 +43,7 @@ explain_drift() {
         return 110
     fi
 
-    if ! RESPONSE=$(curl -s -X POST "$MISTRAL_API_URL" \
+    if ! RESPONSE=$(curl -fsS --connect-timeout 5 --max-time 30 -X POST "$MISTRAL_API_URL" \
         -H "Authorization: Bearer $MISTRAL_API_KEY" \
         -H "Content-Type: application/json" \
         -d "$PAYLOAD"); then

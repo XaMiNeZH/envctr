@@ -10,14 +10,50 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 ENVCTR="$ROOT_DIR/envctr"
 PROJECT="$ROOT_DIR/examples/microservices-monorepo"
 LOG_DIR="$SCRIPT_DIR/tmp/logs/heavy"
 LOCKFILE="$PROJECT/envctr.lock"
+RUNNER_DIR="$SCRIPT_DIR/tmp/envctr-runner-heavy"
+RUNNER="$RUNNER_DIR/envctr"
+export LOG_DIR
+
+cleanup() {
+    rm -f "$LOCKFILE"
+    rm -rf "$RUNNER_DIR"
+}
+trap cleanup EXIT
+
+prepare_runner() {
+    local file
+
+    rm -rf "$RUNNER_DIR"
+    mkdir -p "$RUNNER_DIR/core" "$RUNNER_DIR/backends" "$RUNNER_DIR/configs" "$RUNNER_DIR/helpers"
+
+    sed 's/\r$//' "$ENVCTR" > "$RUNNER"
+    sed 's/\r$//' "$ROOT_DIR/configs/default.conf" > "$RUNNER_DIR/configs/default.conf"
+
+    if [[ -f "$ROOT_DIR/envctr.conf" ]]; then
+        sed 's/\r$//' "$ROOT_DIR/envctr.conf" > "$RUNNER_DIR/envctr.conf"
+    fi
+
+    for file in "$ROOT_DIR/core"/*.sh; do
+        sed 's/\r$//' "$file" > "$RUNNER_DIR/core/$(basename "$file")"
+    done
+
+    for file in "$ROOT_DIR/backends"/*.sh; do
+        sed 's/\r$//' "$file" > "$RUNNER_DIR/backends/$(basename "$file")"
+    done
+
+    for file in "$ROOT_DIR/helpers"/*.c; do
+        sed 's/\r$//' "$file" > "$RUNNER_DIR/helpers/$(basename "$file")"
+    done
+}
 
 mkdir -p "$LOG_DIR"
+prepare_runner
 
 echo ""
 echo "========================================"
@@ -29,10 +65,20 @@ echo " Backend : docker (-b docker)"
 echo " Ref     : directive 3.2.4 — heavy workload"
 echo ""
 
+if ! command -v gcc >/dev/null 2>&1; then
+    echo "[FAIL] gcc is required to build helpers/thread_helper"
+    exit 1
+fi
+
+gcc "$RUNNER_DIR/helpers/thread_helper.c" -o "$RUNNER_DIR/helpers/thread_helper" -lpthread
+chmod +x "$RUNNER_DIR/helpers/thread_helper"
+
 # Phase 1: Provision with threads
 echo "--- Phase 1: Fingerprint + Lock (thread mode) ---"
-"$ENVCTR" -t -b docker -p "$PROJECT" -l "$LOG_DIR"
+set +e
+bash "$RUNNER" -t -b docker -p "$PROJECT" -l "$LOG_DIR"
 EXIT_CODE=$?
+set -e
 
 if [[ $EXIT_CODE -eq 0 ]]; then
     echo "[PASS] Thread mode completed"
@@ -52,8 +98,10 @@ fi
 # Phase 2: Drift detection
 echo ""
 echo "--- Phase 2: Drift detection ---"
-"$ENVCTR" -b docker --drift -p "$PROJECT" -l "$LOG_DIR"
+set +e
+bash "$RUNNER" -b docker --drift -p "$PROJECT" -l "$LOG_DIR"
 DRIFT_CODE=$?
+set -e
 
 if [[ $DRIFT_CODE -eq 0 ]]; then
     echo "[PASS] No drift detected — environment matches lockfile"
@@ -77,7 +125,7 @@ else
 fi
 
 # Cleanup
-rm -f "$LOCKFILE"
+cleanup
 echo ""
 echo "[PASS] Lockfile cleaned up"
 echo ""

@@ -9,14 +9,50 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 ENVCTR="$ROOT_DIR/envctr"
 PROJECT="$ROOT_DIR/examples/node-api"
 LOG_DIR="$SCRIPT_DIR/tmp/logs/medium"
 LOCKFILE="$PROJECT/envctr.lock"
+RUNNER_DIR="$SCRIPT_DIR/tmp/envctr-runner-medium"
+RUNNER="$RUNNER_DIR/envctr"
+export LOG_DIR
+
+cleanup() {
+    rm -f "$LOCKFILE"
+    rm -rf "$RUNNER_DIR"
+}
+trap cleanup EXIT
+
+prepare_runner() {
+    local file
+
+    rm -rf "$RUNNER_DIR"
+    mkdir -p "$RUNNER_DIR/core" "$RUNNER_DIR/backends" "$RUNNER_DIR/configs" "$RUNNER_DIR/helpers"
+
+    sed 's/\r$//' "$ENVCTR" > "$RUNNER"
+    sed 's/\r$//' "$ROOT_DIR/configs/default.conf" > "$RUNNER_DIR/configs/default.conf"
+
+    if [[ -f "$ROOT_DIR/envctr.conf" ]]; then
+        sed 's/\r$//' "$ROOT_DIR/envctr.conf" > "$RUNNER_DIR/envctr.conf"
+    fi
+
+    for file in "$ROOT_DIR/core"/*.sh; do
+        sed 's/\r$//' "$file" > "$RUNNER_DIR/core/$(basename "$file")"
+    done
+
+    for file in "$ROOT_DIR/backends"/*.sh; do
+        sed 's/\r$//' "$file" > "$RUNNER_DIR/backends/$(basename "$file")"
+    done
+
+    for file in "$ROOT_DIR/helpers"/*.c; do
+        sed 's/\r$//' "$file" > "$RUNNER_DIR/helpers/$(basename "$file")"
+    done
+}
 
 mkdir -p "$LOG_DIR"
+prepare_runner
 
 echo ""
 echo "========================================"
@@ -28,9 +64,19 @@ echo " Backend : docker (-b docker)"
 echo " Ref     : directive 3.2.4 — medium workload"
 echo ""
 
+if ! command -v gcc >/dev/null 2>&1; then
+    echo "[FAIL] gcc is required to build helpers/fork_helper"
+    exit 1
+fi
+
+gcc "$RUNNER_DIR/helpers/fork_helper.c" -o "$RUNNER_DIR/helpers/fork_helper"
+chmod +x "$RUNNER_DIR/helpers/fork_helper"
+
 # Run envctr
-"$ENVCTR" -f -b docker -p "$PROJECT" -l "$LOG_DIR"
+set +e
+bash "$RUNNER" -f -b docker -p "$PROJECT" -l "$LOG_DIR"
 EXIT_CODE=$?
+set -e
 
 # Check exit code
 if [[ $EXIT_CODE -eq 0 ]]; then
@@ -60,7 +106,7 @@ else
 fi
 
 # Cleanup
-rm -f "$LOCKFILE"
+cleanup
 echo ""
 echo "[PASS] Lockfile cleaned up"
 echo ""

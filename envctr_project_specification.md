@@ -1,8 +1,8 @@
-# envctr — Project Specification
+# envctr - Project Specification
 
 Version: 1.0.0
 Status: Active
-Last updated: 2026-05-03
+Last updated: 2026-05-08
 
 ---
 
@@ -13,136 +13,129 @@ Last updated: 2026-05-03
 | Tool name | `envctr` |
 | Full name | Environment Controller |
 | Main script | `envctr` |
-| Language | Bash 5.0+ / C (pthreads helper) |
-| Course | Théorie des Systèmes d'Exploitation & SE Windows/Unix/Linux |
-| Institution | ENSET Mohammedia — Université Hassan II de Casablanca |
+| Language | Bash 5.0+ / C helpers |
+| Course | Theorie des Systemes d'Exploitation & SE Windows/Unix/Linux |
+| Institution | ENSET Mohammedia - Universite Hassan II de Casablanca |
 | Deadline | 14/05/2026 23:59:59 |
 
 ---
 
 ## 2. Problem Statement
 
-Every software engineering team eventually hits the same wall. A developer
-clones a repository and spends hours making it run locally. The project requires
-a specific Node version, a system library that is not documented, a port that
-conflicts with something already running, or a database version nobody wrote
-down because it worked on the original developer's machine.
+Development projects often depend on implicit state: runtime versions, service expectations, ports, and environment variables. This information is scattered across manifests, config files, examples, and source code. When the documentation and the project files drift apart, teammates lose time debugging setup differences.
 
-Docker partially solves this for projects that already have a Dockerfile. But it
-does not solve three specific problems:
+envctr solves this by turning the current project state into a lockfile and comparing future project state against that lockfile.
 
-**Kernel-level isolation.** Docker shares the host kernel. If a project requires
-testing against a specific kernel version or working with kernel modules, Docker
-is not sufficient. QEMU/KVM boots a full virtual machine with its own kernel.
+The simplified scope is explicit:
 
-**Machines without Docker.** On locked-down university machines, some CI
-environments, or minimal setups, Docker is not available. chroot is a pure
-Linux primitive that works anywhere.
-
-**Silent container mutation.** Docker has no mechanism to detect when a running
-container's state no longer matches its Dockerfile. A developer who runs
-`docker exec` and manually installs a package creates invisible drift. envctr
-detects this.
+1. Fingerprint a project directory.
+2. Write a lockfile.
+3. Detect drift.
+4. Explain drift through the Mistral API.
 
 ---
 
 ## 3. Solution Overview
 
-envctr is a command-line tool that operates in four phases:
+envctr operates in four phases:
 
+```text
+Fingerprint -> Lock -> Drift -> Explain
 ```
-Fingerprint --> Provision --> Lock --> Drift Detection
-```
 
-**Fingerprint:** Scan the project directory using regex and file structure
-analysis to detect the stack, runtimes, services, ports, and environment
-variables needed. If a Dockerfile already exists, read it directly.
+**Fingerprint:** Scan the project directory using regex and file structure analysis to detect runtime, services, ports, and required environment variable names.
 
-**Provision:** Using the detected stack and the chosen backend (Docker,
-QEMU/KVM, or chroot), build and start the isolated environment automatically.
+**Lock:** Write `envctr.lock` from the exported fingerprint variables and the selected backend label.
 
-**Lock:** Write `envctr.lock` to the project root capturing the exact
-environment state. This file is committed to version control.
+**Drift:** Run fingerprinting again and compare current values against the lockfile. Differences are classified as `BREAKING`, `WARNING`, or `INFO`.
 
-**Drift Detection:** On subsequent runs with `--drift`, compare the live
-environment against the lockfile. Classify differences as BREAKING, WARNING,
-or INFO. Optionally explain the drift report in plain language via Mistral API.
+**Explain:** Optionally send the drift report to the Mistral API with `curl` and print a plain-language explanation.
+
+The `-b` backend option accepts `docker`, `qemu`, and `chroot`, but those values are metadata only. They document intended external environment strategy in the lockfile.
 
 ---
 
 ## 4. Core Requirements from Project PDF
 
-These are non-negotiable. Every item below must be met exactly as stated.
+These items remain required.
 
-### 4.1 Mandatory options
+### 4.1 Mandatory Options
 
 | Option | Required behavior |
 |---|---|
 | `-h` | Display detailed program documentation in terminal |
-| `-f` | Fork execution — each service provisioned in an independent child process via `fork()` |
-| `-t` | Thread execution — parallel provisioning via real pthreads C helper |
-| `-s` | Subshell execution — pipeline runs inside `( ... )` subshell |
+| `-f` | Fork execution through the C fork helper |
+| `-t` | Thread execution through the C pthread helper |
+| `-s` | Subshell execution with `( ... )` |
 | `-l <dir>` | Specify custom log directory |
-| `-r` | Reset envctr.conf to defaults and destroy provisioned environment — root only |
+| `-r` | Reset default parameters; admin-only guard |
 
-### 4.2 Mandatory parameter
+The `-f` and `-t` helpers now run fingerprinting pipeline work in parallel. They do not perform environment setup.
 
-`-p <directory>` is required. Absence triggers error 101 and displays help.
+### 4.2 Mandatory Parameter
+
+`-p <directory>` identifies the project directory. Absence triggers error `101` and displays help.
+
+`-b <backend>` records backend intent in the lockfile.
 
 ### 4.3 Logging
 
 - Log file: `history.log`
 - Default path: `/var/log/envctr/history.log`
-- All stdout and stderr must be redirected simultaneously to terminal AND log
+- Output must go to terminal and log simultaneously.
 - Format exactly: `yyyy-mm-dd-hh-mm-ss : username : INFOS : message`
 - Format exactly: `yyyy-mm-dd-hh-mm-ss : username : ERROR : message`
 
-### 4.4 Error handling
+### 4.4 Error Handling
 
-- Every error must have a unique code
-- Help must display automatically after every triggered error
-- Codes 100 (unknown option) and 101 (missing parameter) are required minimums
+- Every handled error must have a unique code.
+- Help must display automatically after every triggered error.
+- Codes `100` and `101` are required minimums.
+- Error `110` is used when Mistral explanation is unavailable.
 
-### 4.5 Shell concepts required
+### 4.5 Shell Concepts Required
 
-Conditions, loops, functions, environment variables, regular expressions,
-file manipulation, search/archive/compression, access control, pipes and
-filters.
+Conditions, loops, functions, environment variables, regular expressions, file manipulation, search/filtering, access control, pipes, and filters.
 
-### 4.6 Test scenarios
+### 4.6 Test Scenarios
 
-Three scenarios required: light (subshell), medium (fork), heavy (threads).
+Three scenarios are required:
 
-### 4.7 Execution syntax
+- Light: subshell mode with `examples/flask-simple`.
+- Medium: fork mode with `examples/node-api`.
+- Heavy: thread mode with `examples/microservices-monorepo`.
 
-```
-envctr [options] -p <project_directory>
+Each scenario demonstrates fingerprinting, lockfile generation, and drift detection.
+
+### 4.7 Execution Syntax
+
+```bash
+envctr [options] -b <backend> -p <project_directory>
 ```
 
 ---
 
 ## 5. Architecture
 
-```
-envctr                          <- Main script. Entry point. Parses options,
-|                                  orchestrates all phases, manages logging.
+```text
+envctr                          <- Main script. Parses options and orchestrates phases.
 |
 +-- core/
 |   +-- fingerprint.sh          <- Detects stack from project files using regex
 |   +-- lock.sh                 <- Generates and parses envctr.lock
-|   +-- drift.sh                <- Compares live environment to lockfile
+|   +-- drift.sh                <- Compares current fingerprint to lockfile
 |   +-- explain.sh              <- Calls Mistral API to explain drift report
 |   +-- logger.sh               <- log_message() function, shared by all
 |   +-- errors.sh               <- Error codes, die(), show_help()
 |
 +-- backends/
-|   +-- docker.sh               <- Docker provisioning logic
-|   +-- qemu.sh                 <- QEMU/KVM provisioning via SSH
-|   +-- chroot.sh               <- chroot jail provisioning
+|   +-- docker.sh               <- Stub: logs selected backend
+|   +-- qemu.sh                 <- Stub: logs selected backend
+|   +-- chroot.sh               <- Stub: logs selected backend
 |
 +-- helpers/
-|   +-- fork_helper.c           <- Forks one child process per service
-|   +-- thread_helper.c         <- pthreads parallel provisioning
+|   +-- fork_helper.c           <- Forks fingerprinting jobs
+|   +-- thread_helper.c         <- Runs fingerprinting jobs with pthreads
 |
 +-- configs/
 |   +-- default.conf            <- Default envctr configuration
@@ -167,7 +160,29 @@ envctr                          <- Main script. Entry point. Parses options,
 +-- envctr.conf                 <- User configuration
 +-- CHANGELOG.md
 +-- README.md
++-- MINI_PROJET_REQUIREMENTS_TRACKER.md
++-- TASK_REPARTITION.md
++-- envctr_project_specification.md
++-- VERSION
 ```
+
+### Phase 1 - Fingerprinting
+
+`core/fingerprint.sh` scans project files and exports normalized variables describing runtime, services, ports, and environment variable names.
+
+### Phase 2 - Backend Recording
+
+Backend recording: the chosen backend is recorded in the lockfile. No containers or VMs are started.
+
+The backend scripts in `backends/` are stubs. Their only job is to log the selected backend and return success.
+
+### Phase 3 - Lockfile
+
+`core/lock.sh` writes `envctr.lock` from the exported fingerprint variables. It also records the selected backend label.
+
+### Phase 4 - Drift and Explain
+
+`core/drift.sh` reads the lockfile, runs fingerprinting again, compares fields, and prints a severity-classified report. `core/explain.sh` can send that report to the Mistral API and print a plain-language explanation.
 
 ---
 
@@ -176,18 +191,18 @@ envctr                          <- Main script. Entry point. Parses options,
 | Code | Description |
 |---|---|
 | 100 | Unknown option |
-| 101 | Mandatory parameter missing (`-p`) |
+| 101 | Mandatory parameter missing |
 | 102 | Project directory not found |
-| 103 | Permission denied — operation requires root |
-| 104 | Backend not available on this machine |
-| 105 | Fingerprinting failed — no recognizable stack detected |
+| 103 | Permission denied for admin-only operation |
+| 104 | Unsupported backend label |
+| 105 | Fingerprinting failed; no recognizable stack detected |
 | 106 | Lockfile not found or corrupted |
-| 107 | Provisioning failed — backend returned non-zero exit |
-| 108 | KVM not available (`/dev/kvm` inaccessible) |
-| 109 | Drift detected — environment does not match lockfile |
-| 110 | Mistral API unreachable — drift explanation unavailable, raw report shown |
+| 107 | Lockfile write failed or backend stub returned non-zero |
+| 108 | Reserved for legacy backend availability checks |
+| 109 | Drift detected; current fingerprint does not match lockfile |
+| 110 | Mistral API unreachable or not configured |
 | 111 | `-r` reset requires root privileges |
-| 112 | Backend binary not found (`docker`, `qemu-system-x86_64`, etc.) |
+| 112 | Required helper script or binary not found |
 
 ---
 
@@ -197,10 +212,6 @@ Default at `/etc/envctr/envctr.conf` or `configs/default.conf`:
 
 ```bash
 LOG_DIR="/var/log/envctr"
-DEFAULT_BACKEND="docker"
-DOCKER_NETWORK="envctr-net"
-QEMU_SSH_PORT="2222"
-CHROOT_BASE_DIR="/var/envctr/jails"
 MISTRAL_API_KEY=""
 MISTRAL_MODEL="mistral-small-latest"
 MISTRAL_API_URL="https://api.mistral.ai/v1/chat/completions"
@@ -223,25 +234,21 @@ generated_by   = username
 
 [runtime]
 language  = node
-version   = 18.17.1
+version   = 18
 manager   = npm
 
 [services]
-postgresql = 15.3
-redis      = 7.2.1
+postgresql = detected
+redis      = detected
 
 [ports]
-app      = 3000
-postgres = 5432
-redis    = 6379
+app = 3000
 
 [environment]
 required_vars = DATABASE_URL, REDIS_URL, JWT_SECRET
 
 [backend]
-type       = docker
-base_image = node:18-alpine
-volumes    = ./:/app
+type = docker
 ```
 
 ---
@@ -250,34 +257,39 @@ volumes    = ./:/app
 
 | Requirement | Status | Notes |
 |---|---|---|
-| Main Bash script | Planned | `envctr` |
-| At least one mandatory parameter | Planned | `-p <directory>` |
-| Six mandatory options | Planned | `-h -f -t -s -l -r` |
-| `-h` help | Planned | `show_help()` in `core/errors.sh` |
-| `-f` fork | Planned | `fork_helper.c` via `fork()` + `waitpid()` |
-| `-t` thread | Planned | `thread_helper.c` via `pthreads` |
-| `-s` subshell | Planned | `( ... )` subshell wrapper |
-| `-l` log dir | Planned | Overrides `LOG_DIR` |
-| `-r` restore (root only) | Planned | Resets `envctr.conf` + destroys environment |
-| Admin privilege check | Planned | `[[ $EUID -ne 0 ]]` for `-r` |
-| Conditions | Planned | Backend checks, root check, lockfile existence |
-| Loops | Planned | Service iteration, fingerprint scan |
-| Functions | Planned | `fingerprint()`, `provision()`, `lock()`, `detect_drift()`, `log_message()` |
-| Environment variables | Planned | `ENVCTR_BACKEND`, `ENVCTR_LOG_DIR`, `ENVCTR_DEFAULT_BASE` |
-| Regular expressions | Planned | Version extraction from manifests, port detection |
-| File manipulation | Planned | Lockfile R/W, log management, bind-mounts |
-| Search and archiving | Planned | `find` for scanning, `tar` for snapshots |
-| Access control | Planned | `-r` root-only, chroot privileges |
-| Pipes and filters | Planned | Stack fingerprinting pipeline |
-| Log to terminal + file simultaneously | Planned | `tee -a /var/log/envctr/history.log` |
-| Log path `/var/log/envctr/history.log` | Planned | Default in `configs/default.conf` |
-| Log format exact match | Planned | `yyyy-mm-dd-hh-mm-ss : username : INFOS : message` |
-| Error codes | Planned | 13 codes defined |
-| Help after every error | Planned | `die()` always calls `show_help()` |
-| Light scenario | Planned | `tests/test_light.sh` — subshell, chroot, Flask |
-| Medium scenario | Planned | `tests/test_medium.sh` — fork, Docker, Node+Postgres |
-| Heavy scenario | Planned | `tests/test_heavy.sh` — threads, Docker, 8 services |
-| External C scripts | Planned | `fork_helper.c`, `thread_helper.c` |
-| PDF report | Pending | `TeamID-devoir-shell.pdf` |
-| PPTX one slide | Pending | `TeamID-devoir-shell.pptx` |
-| ZIP submission | Pending | `TeamID-devoir-shell.zip` |
+| Main Bash script | Met | In PR #3, pending merge |
+| At least one mandatory parameter | Met | `-p <directory>` in PR #3, pending merge |
+| Six mandatory options | Met | `-h -f -t -s -l -r` in PR #3, pending merge |
+| `-h` help | Met | `show_help()` in PR #3, pending merge |
+| `-f` fork | Met | `fork_helper.c` in PR #3, pending merge |
+| `-t` thread | Met | `thread_helper.c` in PR #3, pending merge |
+| `-s` subshell | Met | In PR #3, pending merge |
+| `-l` log dir | Met | In PR #3, pending merge |
+| `-r` reset, root only | Met | Admin guard in PR #3, pending merge |
+| Logger | Met | Merged in PR #1 |
+| Fingerprint | Met | `core/fingerprint.sh` in PR #2, pending merge |
+| Lock | Planned | `core/lock.sh` |
+| Drift | Planned | `core/drift.sh` |
+| Explain | Planned | `core/explain.sh` with Mistral API |
+| Backend scripts | Planned | Stubs record intended backend only |
+| Conditions | Met | Option and error handling in PR #3 |
+| Loops | Met | Fingerprint scanning in PR #2 |
+| Functions | Met | Logger merged; CLI/fingerprint/errors in PR #2/#3 |
+| Environment variables | Planned | Mistral config and exported fingerprint variables |
+| Regular expressions | Met | `core/fingerprint.sh` in PR #2 |
+| File manipulation | Planned | Logging met; lockfile read/write planned |
+| Search and filtering | Met | `core/fingerprint.sh` in PR #2 |
+| Access control | Met | `-r` admin guard in PR #3 |
+| Pipes and filters | Met | Logger merged; fingerprint pipeline in PR #2 |
+| Log to terminal + file simultaneously | Met | `core/logger.sh`, merged in PR #1 |
+| Log path `/var/log/envctr/history.log` | Met | `core/logger.sh`, merged in PR #1 |
+| Log format exact match | Met | `core/logger.sh`, merged in PR #1 |
+| Error codes | Met | `core/errors.sh` in PR #3, pending merge |
+| Help after every error | Met | `die()` in PR #3, pending merge |
+| Light scenario | Planned | `tests/test_light.sh`; `flask-simple`; fingerprint + lock + drift |
+| Medium scenario | Planned | `tests/test_medium.sh`; `node-api`; fingerprint + lock + drift |
+| Heavy scenario | Planned | `tests/test_heavy.sh`; `microservices-monorepo`; fingerprint + lock + drift |
+| External C scripts | Met | `fork_helper.c`, `thread_helper.c` in PR #3, pending merge |
+| PDF report | Missing | `TeamID-devoir-shell.pdf` |
+| PPTX one slide | Missing | `TeamID-devoir-shell.pptx` |
+| ZIP submission | Missing | `TeamID-devoir-shell.zip` |

@@ -214,6 +214,7 @@ die() {
     local message
 
     message="$(error_message "$code")"
+    printf '[ERROR %s] %s\n' "$code" "$message" >&2
     log_message "ERROR" "$message" || true
     show_help
     exit "$code"

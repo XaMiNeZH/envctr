@@ -80,15 +80,16 @@ fingerprint() {
 
     # Detect ports
     if [[ -f "$PROJECT_DIR/.env" ]]; then
-        DETECTED_PORTS=$(grep -E '^PORT=[0-9]+' "$PROJECT_DIR/.env" | cut -d '=' -f2 | tr '\n' ',' | sed 's/,$//' || true)
+        DETECTED_PORTS=$(grep -E '^PORT=[0-9]+' "$PROJECT_DIR/.env" | cut -d '=' -f2 | tr -d '\r' | tr '\n' ',' | sed 's/,$//' || true)
     elif [[ -f "$PROJECT_DIR/.env.example" ]]; then
-        DETECTED_PORTS=$(grep -E '^PORT=[0-9]+' "$PROJECT_DIR/.env.example" | cut -d '=' -f2 | tr '\n' ',' | sed 's/,$//' || true)
+        DETECTED_PORTS=$(grep -E '^PORT=[0-9]+' "$PROJECT_DIR/.env.example" | cut -d '=' -f2 | tr -d '\r' | tr '\n' ',' | sed 's/,$//' || true)
     fi
 
     # Detect env variables
     if [[ -f "$PROJECT_DIR/.env.example" ]]; then
         DETECTED_ENV_VARS=$(grep -E '^[A-Z][A-Z0-9_]*=' "$PROJECT_DIR/.env.example" \
             | cut -d '=' -f1 \
+            | tr -d '\r' \
             | tr '\n' ',' \
             | sed 's/,$//' || true)
     fi

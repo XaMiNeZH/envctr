@@ -60,8 +60,6 @@ DRY_RUN=false
 EXPORT=false
 NO_PROVISION=false
 
-log_message "INFOS" "envctr started" || true
-
 POSITIONAL_ARGS=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -216,7 +214,9 @@ load_lock_if_requested() {
 
 fingerprint_project() {
     if declare -F fingerprint >/dev/null; then
+        printf '[FINGERPRINT] scanning %s\n' "$PROJECT_DIR"
         fingerprint "$PROJECT_DIR" || die "$ERR_FINGERPRINT_FAILED"
+        printf '[FINGERPRINT] detected runtime: %s\n' "${DETECTED_RUNTIME:-unknown}"
     else
         log_message "INFOS" "fingerprint module not implemented yet" || true
     fi
@@ -249,7 +249,9 @@ write_lock_if_requested() {
 
     if [[ "$UPDATE_LOCK" == true ]] || [[ "$FROM_LOCK" != true ]]; then
         if declare -F generate_lock >/dev/null; then
-            generate_lock "$PROJECT_DIR"
+            printf '[LOCK] writing %s/envctr.lock\n' "$PROJECT_DIR"
+            generate_lock "$PROJECT_DIR" || die "$ERR_PROVISION_FAILED"
+            printf '[LOCK] lockfile ready: %s/envctr.lock\n' "$PROJECT_DIR"
         else
             log_message "INFOS" "lock generator not implemented yet" || true
         fi
@@ -304,6 +306,7 @@ export_if_requested() {
 }
 
 run_pipeline() {
+    log_message "INFOS" "envctr started" || true
     log_message "INFOS" "execution mode: $MODE" || true
     log_message "INFOS" "backend selected: $BACKEND" || true
     log_message "INFOS" "project directory: $PROJECT_DIR" || true
@@ -344,13 +347,17 @@ build_parallel_commands() {
 
 run_helper_mode() {
     local helper="$1"
+    local helper_name
 
     if [[ ! -x "$helper" ]]; then
         die "$ERR_REQUIRED_HELPER_NOT_FOUND"
     fi
 
+    helper_name="$(basename "$helper")"
     build_parallel_commands
+    log_message "INFOS" "helper invoked: $helper_name" || true
     "$helper" "${SERVICE_COMMANDS[@]}" || die "$ERR_PROVISION_FAILED"
+    log_message "INFOS" "helper completed: $helper_name" || true
     run_pipeline
 }
 

@@ -1,0 +1,77 @@
+language: "en-US"
+early_access: false
+reviews:
+  profile: "assertive"
+  request_changes_workflow: true
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  path_instructions:
+    - path: "core/logger.sh"
+      instructions: |
+        This file must implement log_message() with exactly two args: TYPE (INFOS or ERROR) and MSG.
+        Output format must be exactly: yyyy-mm-dd-hh-mm-ss : username : INFOS : message
+        Must use tee -a to write simultaneously to terminal and to $LOG_FILE.
+        Must create $LOG_DIR if it does not exist.
+        LOG_FILE must default to /var/log/envctr/history.log.
+        Any deviation from the exact log format is a blocking issue.
+
+    - path: "core/fingerprint.sh"
+      instructions: |
+        Must implement fingerprint() function taking project directory as argument.
+        Must detect runtime from: package.json (Node), requirements.txt/pyproject.toml (Python),
+        Makefile/*.c (C/C++), pom.xml/build.gradle (Java), Cargo.toml (Rust), go.mod (Go).
+        Must detect services from knexfile.js, database.yml, alembic.ini.
+        Must detect ports by scanning .env files with regex PORT=([0-9]+).
+        If Dockerfile exists, must read it directly and skip inference.
+        Must call log_message() for all output — never use raw echo for logging.
+        Must export DETECTED_RUNTIME, DETECTED_SERVICES, DETECTED_PORTS, DETECTED_ENV_VARS.
+
+    - path: "core/errors.sh"
+      instructions: |
+        Must define all 13 error codes as variables: ERR_UNKNOWN_OPT=100 through ERR_NO_KVM=112.
+        die() must always call show_help() before exiting — no exceptions.
+        check_root() must use [[ $EUID -ne 0 ]] and call die 111 if not root.
+
+    - path: "backends/**.sh"
+      instructions: |
+        Each backend must check its binary exists before doing anything.
+        Docker: check docker binary and daemon running.
+        QEMU: check /dev/kvm accessible, die 108 if not.
+        Chroot: requires root.
+        All output through log_message() only.
+
+    - path: "helpers/**.c"
+      instructions: |
+        fork_helper.c must use real fork() and waitpid() — not background jobs.
+        thread_helper.c must use real pthreads compiled with -lpthread — not background jobs.
+        Both must return 0 only if all children/threads complete successfully.
+
+    - path: "envctr"
+      instructions: |
+        Main script. Must parse options with getopts for short flags.
+        -p is mandatory — absence must trigger die 101.
+        -r must call check_root() before doing anything.
+        Must source all files in core/ at startup.
+        Must set MODE variable: sequential by default, overridden by -s/-f/-t.
+
+    - path: "tests/**.sh"
+      instructions: |
+        test_light.sh must use -s subshell mode with chroot backend.
+        test_medium.sh must use -f fork mode with docker backend.
+        test_heavy.sh must use -t thread mode with docker backend.
+        Each test must verify lockfile was created and log entries exist.
+        Each test must clean up after itself.
+
+chat:
+  auto_reply: true
+
+knowledge_base:
+  opt_out: false
+  learnings:
+    scope: auto
+  issues:
+    scope: auto
+  pull_requests:
+    scope: auto

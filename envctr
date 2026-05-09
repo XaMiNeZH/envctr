@@ -1,1 +1,380 @@
-ÿþ
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+is_utf16_placeholder() {
+    local file="$1"
+    local magic
+    local size
+
+    magic="$(od -An -tx1 -N2 "$file" 2>/dev/null | tr -d '[:space:]' || true)"
+    size="$(wc -c < "$file")"
+    [[ "$magic" == "fffe" && "$size" -le 2 ]]
+}
+
+source_module() {
+    local file="$1"
+
+    [[ -f "$file" ]] || return 0
+    if is_utf16_placeholder "$file"; then
+        return 0
+    fi
+
+    # shellcheck source=/dev/null
+    if LC_ALL=C grep -q $'\r' "$file"; then
+        source <(sed 's/\r$//' "$file")
+    else
+        source "$file"
+    fi
+}
+
+source_module "$SCRIPT_DIR/configs/default.conf"
+source_module "$SCRIPT_DIR/envctr.conf"
+source_module "$SCRIPT_DIR/core/logger.sh"
+source_module "$SCRIPT_DIR/core/errors.sh"
+
+for core_file in "$SCRIPT_DIR"/core/*.sh; do
+    case "$core_file" in
+        "$SCRIPT_DIR/core/logger.sh"|"$SCRIPT_DIR/core/errors.sh")
+            continue
+            ;;
+    esac
+    source_module "$core_file"
+done
+
+for backend_file in "$SCRIPT_DIR"/backends/*.sh; do
+    source_module "$backend_file"
+done
+
+MODE="sequential"
+BACKEND=""
+PROJECT_DIR=""
+EXPLAIN=false
+RESET=false
+DRIFT=false
+FROM_LOCK=false
+RESTORE=false
+UPDATE_LOCK=false
+DRY_RUN=false
+EXPORT=false
+NO_PROVISION=false
+
+POSITIONAL_ARGS=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --drift)
+            DRIFT=true
+            shift
+            ;;
+        --from-lock)
+            FROM_LOCK=true
+            shift
+            ;;
+        --restore)
+            RESTORE=true
+            shift
+            ;;
+        --update-lock)
+            UPDATE_LOCK=true
+            shift
+            ;;
+        --dry-run)
+            DRY_RUN=true
+            shift
+            ;;
+        --export)
+            EXPORT=true
+            shift
+            ;;
+        --no-provision)
+            NO_PROVISION=true
+            shift
+            ;;
+        --)
+            shift
+            while [[ $# -gt 0 ]]; do
+                POSITIONAL_ARGS+=("$1")
+                shift
+            done
+            ;;
+        --*)
+            die "$ERR_UNKNOWN_OPT"
+            ;;
+        *)
+            POSITIONAL_ARGS+=("$1")
+            shift
+            ;;
+    esac
+done
+
+set -- "${POSITIONAL_ARGS[@]}"
+
+OPTERR=0
+while getopts "hftsb:p:l:re" opt; do
+    case "$opt" in
+        h)
+            show_help
+            exit 0
+            ;;
+        f)
+            MODE="fork"
+            ;;
+        t)
+            MODE="thread"
+            ;;
+        s)
+            MODE="subshell"
+            ;;
+        b)
+            BACKEND="$OPTARG"
+            ;;
+        p)
+            PROJECT_DIR="$OPTARG"
+            ;;
+        l)
+            LOG_DIR="$OPTARG"
+            LOG_FILE="$LOG_DIR/history.log"
+            export LOG_DIR LOG_FILE
+            ;;
+        r)
+            RESET=true
+            ;;
+        e)
+            EXPLAIN=true
+            ;;
+        \?)
+            die "$ERR_UNKNOWN_OPT"
+            ;;
+    esac
+done
+shift $((OPTIND - 1))
+
+if [[ $# -gt 0 ]]; then
+    die "$ERR_UNKNOWN_OPT"
+fi
+
+if [[ -z "$PROJECT_DIR" ]]; then
+    die "$ERR_MISSING_PARAM"
+fi
+
+if [[ -z "$BACKEND" ]]; then
+    die "$ERR_MISSING_PARAM"
+fi
+
+if [[ ! -d "$PROJECT_DIR" ]]; then
+    die "$ERR_DIR_NOT_FOUND"
+fi
+
+case "$BACKEND" in
+    docker|qemu|chroot)
+        ;;
+    *)
+        die "$ERR_UNSUPPORTED_BACKEND"
+        ;;
+esac
+
+if [[ "$RESET" == true ]]; then
+    check_root
+fi
+
+export BACKEND PROJECT_DIR
+
+reset_environment() {
+    local default_conf="$SCRIPT_DIR/configs/default.conf"
+    local target_conf="$SCRIPT_DIR/envctr.conf"
+
+    if [[ -f "$default_conf" ]] && ! is_utf16_placeholder "$default_conf"; then
+        cp "$default_conf" "$target_conf"
+        log_message "INFOS" "envctr.conf reset to defaults" || true
+    else
+        log_message "INFOS" "default configuration not available; reset skipped" || true
+    fi
+
+    log_message "INFOS" "reset requested for backend $BACKEND" || true
+}
+
+load_lock_if_requested() {
+    local lockfile="$PROJECT_DIR/envctr.lock"
+
+    if [[ "$FROM_LOCK" != true && "$RESTORE" != true && "$DRIFT" != true ]]; then
+        return 0
+    fi
+
+    if [[ ! -f "$lockfile" ]]; then
+        die "$ERR_LOCKFILE_INVALID"
+    fi
+
+    if declare -F parse_lock >/dev/null; then
+        parse_lock "$lockfile"
+    else
+        log_message "INFOS" "lock parser not implemented yet; using existing lockfile only" || true
+    fi
+}
+
+fingerprint_project() {
+    if declare -F fingerprint >/dev/null; then
+        printf '[FINGERPRINT] scanning %s\n' "$PROJECT_DIR"
+        fingerprint "$PROJECT_DIR" || die "$ERR_FINGERPRINT_FAILED"
+        printf '[FINGERPRINT] detected runtime: %s\n' "${DETECTED_RUNTIME:-unknown}"
+    else
+        log_message "INFOS" "fingerprint module not implemented yet" || true
+    fi
+}
+
+provision_backend() {
+    local provision_function="provision_$BACKEND"
+
+    if [[ "$NO_PROVISION" == true ]]; then
+        log_message "INFOS" "backend recording skipped by --no-provision" || true
+        return 0
+    fi
+
+    if [[ "$DRY_RUN" == true ]]; then
+        log_message "INFOS" "dry run: would fingerprint $PROJECT_DIR and record backend $BACKEND" || true
+        return 0
+    fi
+
+    if declare -F "$provision_function" >/dev/null; then
+        "$provision_function" "$PROJECT_DIR" || die "$ERR_PROVISION_FAILED"
+    else
+        log_message "INFOS" "backend function $provision_function not implemented yet" || true
+    fi
+}
+
+write_lock_if_requested() {
+    if [[ "$DRIFT" == true || "$RESTORE" == true ]]; then
+        return 0
+    fi
+
+    if [[ "$UPDATE_LOCK" == true ]] || [[ "$FROM_LOCK" != true ]]; then
+        if declare -F generate_lock >/dev/null; then
+            printf '[LOCK] writing %s/envctr.lock\n' "$PROJECT_DIR"
+            generate_lock "$PROJECT_DIR" || die "$ERR_PROVISION_FAILED"
+            printf '[LOCK] lockfile ready: %s/envctr.lock\n' "$PROJECT_DIR"
+        else
+            log_message "INFOS" "lock generator not implemented yet" || true
+        fi
+    fi
+}
+
+detect_drift_if_requested() {
+    local drift_status=0
+    local drift_report=""
+
+    if [[ "$DRIFT" != true ]]; then
+        return 0
+    fi
+
+    if declare -F detect_drift >/dev/null; then
+        detect_drift "$PROJECT_DIR" || drift_status=$?
+    else
+        log_message "INFOS" "drift module not implemented yet" || true
+    fi
+
+    if [[ "$drift_status" -ne 0 && "$drift_status" -ne "$ERR_DRIFT_DETECTED" ]]; then
+        die "$drift_status"
+    fi
+
+    if [[ "$EXPLAIN" == true && "$drift_status" -eq "$ERR_DRIFT_DETECTED" ]]; then
+        if declare -F explain_drift >/dev/null; then
+            drift_report="${LAST_DRIFT_REPORT:-}"
+            if [[ -z "$drift_report" ]]; then
+                drift_report="Drift detected in project: $PROJECT_DIR"
+            fi
+            explain_drift "$drift_report" || die "$ERR_MISTRAL_UNREACHABLE"
+        else
+            log_message "INFOS" "explain module not implemented yet" || true
+        fi
+    fi
+
+    if [[ "$drift_status" -eq "$ERR_DRIFT_DETECTED" ]]; then
+        die "$ERR_DRIFT_DETECTED"
+    fi
+}
+
+export_if_requested() {
+    if [[ "$EXPORT" != true ]]; then
+        return 0
+    fi
+
+    if declare -F export_environment >/dev/null; then
+        export_environment "$PROJECT_DIR"
+    else
+        log_message "INFOS" "export module not implemented yet" || true
+    fi
+}
+
+run_pipeline() {
+    log_message "INFOS" "envctr started" || true
+    log_message "INFOS" "execution mode: $MODE" || true
+    log_message "INFOS" "backend selected: $BACKEND" || true
+    log_message "INFOS" "project directory: $PROJECT_DIR" || true
+
+    if [[ "$RESET" == true ]]; then
+        reset_environment
+        log_message "INFOS" "envctr completed" || true
+        return 0
+    fi
+
+    load_lock_if_requested
+
+    if [[ "$DRIFT" == true ]]; then
+        detect_drift_if_requested
+        log_message "INFOS" "envctr completed" || true
+        return 0
+    fi
+
+    fingerprint_project
+    provision_backend
+    write_lock_if_requested
+    export_if_requested
+
+    log_message "INFOS" "envctr completed" || true
+}
+
+build_parallel_commands() {
+    SERVICE_COMMANDS=()
+
+    if declare -F "build_${BACKEND}_commands" >/dev/null; then
+        "build_${BACKEND}_commands" "$PROJECT_DIR"
+    fi
+
+    if [[ ${#SERVICE_COMMANDS[@]} -eq 0 ]]; then
+        SERVICE_COMMANDS+=("printf '%s\n' 'envctr helper ready for $BACKEND backend recording'")
+    fi
+}
+
+run_helper_mode() {
+    local helper="$1"
+    local helper_name
+
+    if [[ ! -x "$helper" ]]; then
+        die "$ERR_REQUIRED_HELPER_NOT_FOUND"
+    fi
+
+    helper_name="$(basename "$helper")"
+    build_parallel_commands
+    log_message "INFOS" "helper invoked: $helper_name" || true
+    "$helper" "${SERVICE_COMMANDS[@]}" || die "$ERR_PROVISION_FAILED"
+    log_message "INFOS" "helper completed: $helper_name" || true
+    run_pipeline
+}
+
+case "$MODE" in
+    subshell)
+        ( run_pipeline )
+        ;;
+    fork)
+        run_helper_mode "$SCRIPT_DIR/helpers/fork_helper"
+        ;;
+    thread)
+        run_helper_mode "$SCRIPT_DIR/helpers/thread_helper"
+        ;;
+    sequential)
+        run_pipeline
+        ;;
+    *)
+        die "$ERR_UNKNOWN_OPT"
+        ;;
+esac

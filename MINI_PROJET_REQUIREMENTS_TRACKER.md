@@ -1,22 +1,27 @@
 # Mini Projet Requirements Tracker
 
-Audit date: 2026-05-03
+Audit date: 2026-05-08
 Project: envctr
 Main script: `envctr`
 
 Legend:
-- `Met` — implemented and verified
-- `Planned` — designed, not yet implemented
-- `Partial` — implemented but not fully compliant
-- `Missing` — not found, must be added before submission
+
+- `Met` - implemented or completed in the referenced PR
+- `Planned` - required and assigned, not implemented yet
+- `Missing` - required deliverable not found yet
 
 ---
 
 ## Overall Status
 
-envctr is in pre-implementation phase. Architecture is designed, task
-distribution is complete, and all technical decisions are finalized. This
-tracker will be updated after each implementation milestone.
+envctr has been simplified to four features only:
+
+1. Fingerprint a project directory.
+2. Write `envctr.lock`.
+3. Detect drift between the lockfile and the current fingerprint.
+4. Explain drift through the Mistral API.
+
+The backend option `-b` remains in the CLI, but it only records intended backend metadata in the lockfile. Backend scripts are stubs and do not implement Docker, QEMU, or chroot setup.
 
 ---
 
@@ -24,12 +29,12 @@ tracker will be updated after each implementation milestone.
 
 | Requirement | Status | Evidence | Notes |
 |---|---|---|---|
-| Automate standard Unix/Linux processes | Planned | `envctr_project_specification.md` | Automates fingerprinting, provisioning, locking, drift detection |
-| Address a real user need for developers or sysadmins | Planned | `README.md` | Dev environment reproducibility and drift detection |
-| Main shell script deliverable | Planned | `envctr` | Main Bash CLI, entry point |
-| PDF report `TeamID-devoir-shell.pdf` | Missing | — | Due before 14/05/2026 |
-| One-slide PPTX `TeamID-devoir-shell.pptx` | Missing | — | Due before 14/05/2026 |
-| ZIP `TeamID-devoir-shell.zip` | Missing | — | Due before 14/05/2026 |
+| Automate standard Unix/Linux processes | Met | `envctr_project_specification.md` | Automates fingerprinting, lockfile generation, drift detection, and optional explanation |
+| Address a real user need for developers or sysadmins | Met | `README.md` | Captures project state and detects documentation drift |
+| Main shell script deliverable | Met | `envctr` | Implemented |
+| PDF report `TeamID-devoir-shell.pdf` | Missing | - | Due before 14/05/2026 |
+| One-slide PPTX `TeamID-devoir-shell.pptx` | Missing | - | Due before 14/05/2026 |
+| ZIP `TeamID-devoir-shell.zip` | Missing | - | Due before 14/05/2026 |
 
 ---
 
@@ -37,26 +42,39 @@ tracker will be updated after each implementation milestone.
 
 | Requirement | Status | Evidence | Notes |
 |---|---|---|---|
-| Developed primarily in Bash | Planned | `envctr`, `core/*.sh`, `backends/*.sh` | All orchestration in Bash |
-| May call external Bash or C scripts | Planned | `helpers/fork_helper.c`, `helpers/thread_helper.c` | C helpers for fork and pthreads |
-| Unix/Linux commands | Planned | See section 2.1 | Full list below |
-| Conditions | Planned | Backend checks, root check, lockfile existence | `if`, `case`, `[[ ]]` |
-| Loops | Planned | Service iteration, file scanning | `for`, `while` |
-| Functions | Planned | `fingerprint()`, `provision()`, `lock()`, `detect_drift()`, `log_message()`, `die()`, `show_help()`, `check_root()` | All in dedicated files |
-| Environment variables | Planned | `ENVCTR_BACKEND`, `ENVCTR_LOG_DIR`, `ENVCTR_DEFAULT_BASE`, `MISTRAL_API_KEY` | Sourced from `configs/default.conf` |
-| Regular expressions | Planned | Version extraction from manifests, port detection, lockfile validation | Used in `core/fingerprint.sh` |
-| File manipulation | Planned | Lockfile read/write, log management, bind-mounts | `mkdir`, `rm`, `cp`, `tee` |
-| Archiving and compression | Planned | `tar` for environment snapshots | In `core/lock.sh` |
-| Access control | Planned | `-r` root-only via `[[ $EUID -ne 0 ]]` | In `core/errors.sh` |
-| Pipes and filters | Planned | `find . -name "*.json" \| grep -v node_modules \| xargs grep "engines"` | In `core/fingerprint.sh` |
-| At least one mandatory parameter | Planned | `-p <directory>` | Absence triggers error 101 |
+| Developed primarily in Bash | Met | `envctr`, `core/*.sh`, `backends/*.sh` | Implemented |
+| May call external Bash or C scripts | Met | `helpers/fork_helper.c`, `helpers/thread_helper.c` | Implemented |
+| `core/logger.sh` | Met | `core/logger.sh` | Implemented |
+| `core/fingerprint.sh` | Met | `core/fingerprint.sh` | Implemented |
+| `core/errors.sh` | Met | `core/errors.sh` | Implemented |
+| Main `envctr` script | Met | `envctr` | Implemented |
+| `helpers/fork_helper.c` | Met | `helpers/fork_helper.c` | Implemented |
+| `helpers/thread_helper.c` | Met | `helpers/thread_helper.c` | Implemented |
+| `core/lock.sh` | Met | `core/lock.sh` | Generates `envctr.lock` from exported fingerprint variables |
+| `core/drift.sh` | Met | `core/drift.sh` | Compares lockfile fields against current fingerprint |
+| `core/explain.sh` | Met | `core/explain.sh` | Calls Mistral API with drift report input |
+| Backend scripts | Met | `backends/*.sh` | Simplified stubs record intended backend only |
+| Unix/Linux commands | Met | See section 2.1 | Used across fingerprint, lock, drift, explain, tests, and logging |
+| Conditions | Met | `envctr`, `core/errors.sh` | Option checks and error flow |
+| Loops | Met | `core/fingerprint.sh`, `core/lock.sh` | Fingerprint scans and lockfile entries |
+| Functions | Met | `core/*.sh`, `backends/*.sh` | Main pipeline and module functions |
+| Environment variables | Met | `configs/default.conf`, exported fingerprint variables | Mistral config and exported fingerprint variables |
+| Regular expressions | Met | `core/fingerprint.sh` | Runtime, ports, and env var scans |
+| File manipulation | Met | `core/lock.sh`, `core/drift.sh`, `core/logger.sh` | Logging and lockfile read/write |
+| Search and filtering | Met | `core/fingerprint.sh` | Project scans |
+| Access control | Met | `core/errors.sh`, `envctr` | `-r` admin check |
+| Pipes and filters | Met | `core/fingerprint.sh`, `core/logger.sh`, `core/explain.sh` | Logger uses `tee`; modules use shell filters |
+| At least one mandatory parameter | Met | `envctr` | `-p <directory>` |
 
 ### 2.1 Unix/Linux Commands Used
 
-`find`, `grep`, `awk`, `sed`, `tee`, `tar`, `ssh`, `curl`, `docker`,
-`qemu-system-x86_64`, `chroot`, `debootstrap`, `diff`, `stat`, `wc`, `sort`,
-`uniq`, `file`, `env`, `chmod`, `chown`, `mkdir`, `rm`, `cp`, `cat`, `echo`,
-`date`, `whoami`, `id`
+Current and planned command set:
+
+`find`, `grep`, `awk`, `sed`, `tee`, `curl`, `diff`, `stat`, `wc`, `sort`,
+`uniq`, `file`, `env`, `chmod`, `mkdir`, `rm`, `cp`, `cat`, `echo`, `date`,
+`whoami`, `basename`, `dirname`
+
+Docker, QEMU, and chroot are not implementation dependencies in the simplified scope. Their names may appear only as backend labels recorded in the lockfile.
 
 ---
 
@@ -64,21 +82,16 @@ tracker will be updated after each implementation milestone.
 
 | Option | Required meaning | Status | Implementation | Notes |
 |---|---|---|---|---|
-| `-h` | Help / full documentation | Planned | `show_help()` in `core/errors.sh` | Displays to terminal on `-h` and after every error |
-| `-f` | Fork execution | Planned | `helpers/fork_helper.c` compiled to `helpers/fork_helper` | Real `fork()` + `waitpid()` in C — not background jobs |
-| `-t` | Thread execution | Planned | `helpers/thread_helper.c` compiled with `-lpthread` | Real pthreads — not background job simulation |
-| `-s` | Subshell execution | Planned | `( envctr_pipeline )` in `envctr` | Wraps full pipeline in subshell |
-| `-l <dir>` | Custom log directory | Planned | Overrides `LOG_DIR` variable | Validates directory exists or creates it |
-| `-r` | Reset defaults, admin only | Planned | Resets `envctr.conf` to defaults, destroys provisioned environment | `[[ $EUID -ne 0 ]]` enforced — triggers error 111 if not root |
+| `-h` | Help / full documentation | Met | `show_help()` in `core/errors.sh` | Implemented |
+| `-f` | Fork execution | Met | `helpers/fork_helper.c` | Runs helper work through fork |
+| `-t` | Thread execution | Met | `helpers/thread_helper.c` | Runs helper work through pthreads |
+| `-s` | Subshell execution | Met | `( run_pipeline )` in `envctr` | Implemented |
+| `-l <dir>` | Custom log directory | Met | Overrides `LOG_DIR` | Implemented |
+| `-r` | Reset defaults, admin only | Met | `check_root()` guard | Implemented |
 
-**Note on `-t`:** The project PDF requires thread execution. This is implemented
-using a real C pthreads helper, not Bash background job simulation. This is the
-correct interpretation of the requirement.
+**Note on `-f` and `-t`:** The C helpers remain part of the project. They now support parallel fingerprinting pipeline execution, not service provisioning.
 
-**Note on `-r`:** The project PDF states "reset default parameters, admin only."
-In envctr, this means restoring `envctr.conf` to factory defaults and destroying
-the provisioned environment for the specified project. This matches the
-professor's intent.
+**Note on `-b`:** `-b docker`, `-b qemu`, and `-b chroot` are accepted as backend intent labels. They are recorded in `envctr.lock` only.
 
 ---
 
@@ -86,11 +99,11 @@ professor's intent.
 
 | Requirement | Status | Evidence | Notes |
 |---|---|---|---|
-| STDOUT and STDERR to terminal AND log simultaneously | Planned | `tee -a "$LOG_FILE"` in `core/logger.sh` | All output through `log_message()` |
-| Log file named `history.log` | Planned | `LOG_FILE="$LOG_DIR/history.log"` | Set in `core/logger.sh` |
-| Default path `/var/log/envctr/history.log` | Planned | `configs/default.conf` | `LOG_DIR="/var/log/envctr"` |
-| Log format `yyyy-mm-dd-hh-mm-ss : username : INFOS : message` | Planned | `core/logger.sh` | Exact match, no deviation |
-| Log format `yyyy-mm-dd-hh-mm-ss : username : ERROR : message` | Planned | `core/logger.sh` | Exact match, no deviation |
+| STDOUT and STDERR to terminal AND log simultaneously | Met | `tee -a "$LOG_FILE"` in `core/logger.sh` | Merged in PR #1 |
+| Log file named `history.log` | Met | `LOG_FILE="$LOG_DIR/history.log"` | Merged in PR #1 |
+| Default path `/var/log/envctr/history.log` | Met | `core/logger.sh` | Merged in PR #1 |
+| Log format `yyyy-mm-dd-hh-mm-ss : username : INFOS : message` | Met | `core/logger.sh` | Exact format in PR #1 |
+| Log format `yyyy-mm-dd-hh-mm-ss : username : ERROR : message` | Met | `core/logger.sh` | Exact format in PR #1 |
 
 ---
 
@@ -98,67 +111,80 @@ professor's intent.
 
 | Requirement | Status | Evidence | Notes |
 |---|---|---|---|
-| Handles incorrect usage | Planned | `die()` in `core/errors.sh` | Catches unknown options, missing params, failed operations |
-| Specific error codes | Planned | 13 codes defined in `core/errors.sh` | See specification |
-| Code 100 — unknown option | Planned | `die 100` | First check in option parsing |
-| Code 101 — missing mandatory parameter | Planned | `die 101` | Checked after `getopts` |
-| Help displayed after every triggered error | Planned | `die()` always calls `show_help()` before exit | No exceptions |
+| Handles incorrect usage | Met | `die()` in `core/errors.sh` | Implemented |
+| Specific error codes | Met | `core/errors.sh` | Implemented |
+| Code 100 - unknown option | Met | `die 100` | Implemented |
+| Code 101 - missing parameter | Met | `die 101` | Implemented |
+| Help displayed after every triggered error | Met | `die()` calls `show_help()` | Implemented |
 
 ---
 
-## 6. Test Scenarios
+## 6. Core Feature Status
+
+| Feature | Status | Evidence | Notes |
+|---|---|---|---|
+| Fingerprint | Met | `core/fingerprint.sh` | Implemented |
+| Lock | Met | `core/lock.sh` | Implemented |
+| Drift | Met | `core/drift.sh` | Implemented |
+| Explain | Met | `core/explain.sh` | Mistral API via `curl`; depends on drift report |
+| Backend recording | Met | `backends/*.sh` | Stubs log backend selection and return `0` |
+
+---
+
+## 7. Test Scenarios
 
 | Requirement | Status | Evidence | Notes |
 |---|---|---|---|
-| Standard syntax `program [options] [parameter]` | Planned | `envctr [options] -p <directory>` | Follows Linux convention |
-| Light scenario | Planned | `tests/test_light.sh` | Subshell, chroot, single Python Flask app |
-| Medium scenario | Planned | `tests/test_medium.sh` | Fork, Docker, Node + PostgreSQL + Redis |
-| Heavy scenario | Planned | `tests/test_heavy.sh` | Threads, Docker, 8-service monorepo |
-| Subshell evaluation | Planned | `test_light.sh` uses `-s` | Clear subshell demonstration |
-| Fork evaluation | Planned | `test_medium.sh` uses `-f` | Each service in its own child process |
-| Thread evaluation | Planned | `test_heavy.sh` uses `-t` | Real pthreads C helper |
+| Standard syntax `program [options] [parameter]` | Met | `envctr [options] -b <backend> -p <directory>` | Implemented |
+| Light scenario | Met | `tests/test_light.sh` | `flask-simple`; fingerprint + lock + drift under `-s` |
+| Medium scenario | Met | `tests/test_medium.sh` | `node-api`; fingerprint + lock + drift under `-f` |
+| Heavy scenario | Met | `tests/test_heavy.sh` | `microservices-monorepo`; fingerprint + lock + drift under `-t` |
+| Aggregate test runner | Met | `tests/run_all.sh` | Runs light, medium, and heavy tests |
+| Subshell evaluation | Met | `test_light.sh` | Demonstrates `-s` |
+| Fork evaluation | Met | `test_medium.sh` | Demonstrates `-f` and fork helper |
+| Thread evaluation | Met | `test_heavy.sh` | Demonstrates `-t` and pthread helper |
 
 ---
 
-## 7. Documentation
+## 8. Documentation and Submission
 
 | Requirement | Status | Notes |
 |---|---|---|
-| Internal `-h` documentation | Planned | `show_help()` — Linux man-page style |
-| Extended PDF report | Missing | Must include screenshots from all three test scenarios |
-| Report covers all directive specifications | Missing | Map each feature to its PDF section number |
-| Report includes concrete usage examples | Missing | Normal, subshell, fork, thread |
-| One-slide PPTX | Missing | 180-second pitch — one slide only |
-| Demo plan for 5-minute demonstration | Missing | Script the demo sequence |
+| Internal `-h` documentation | Met | `show_help()` in `core/errors.sh` |
+| `README.md` | Met | Updated for simplified scope |
+| `envctr_project_specification.md` | Met | Updated for simplified scope |
+| `TASK_REPARTITION.md` | Met | Updated for remaining work |
+| Extended PDF report | Missing | Must include screenshots from the simplified test scenarios |
+| One-slide PPTX | Missing | 180-second pitch, one slide only |
+| Demo plan for 5-minute demonstration | Planned | Should use light, medium, and heavy tests |
+| Final ZIP | Missing | Must include final scripts, PDF, PPTX, and required structure |
 
 ---
 
 ## Recommended Actions Before Submission
 
-**Priority 1 — Core compliance (Days 1-6):**
-1. Implement `core/logger.sh` with exact log format first — all teammates depend on it
-2. Implement `core/errors.sh` with `die()` calling `show_help()` always
-3. Implement `helpers/fork_helper.c` and `helpers/thread_helper.c`
-4. Implement option parsing with `getopts` in `envctr`
-5. Implement `-r` with `[[ $EUID -ne 0 ]]` check
+**Priority 1 - Merge current work:**
 
-**Priority 2 — Feature implementation (Days 4-8):**
-1. `core/fingerprint.sh` — stack detection
-2. `backends/docker.sh`, `backends/chroot.sh`, `backends/qemu.sh`
-3. `core/lock.sh` — lockfile generation and parsing
-4. `core/drift.sh` — drift detection
-5. `core/explain.sh` — Mistral API integration
+1. Review and merge PR #2 for `core/fingerprint.sh`.
+2. Review and merge PR #3 for `envctr`, `core/errors.sh`, and C helpers.
+3. Replace backend files with stubs that only log backend selection.
 
-**Priority 3 — Testing and submission (Days 8-10):**
-1. Three test scenario scripts
-2. PDF report with screenshots
-3. One-slide PPTX
-4. Final ZIP packaging
+**Priority 2 - Implement remaining simplified scope:**
+
+1. Implement `core/lock.sh`.
+2. Implement `core/drift.sh`.
+3. Implement `core/explain.sh`.
+4. Wire the final pipeline in `envctr` after PR #2 and PR #3 are merged.
+
+**Priority 3 - Testing and submission:**
+
+1. Create `examples/flask-simple/`.
+2. Create `examples/microservices-monorepo/`.
+3. Write `tests/test_light.sh`, `tests/test_medium.sh`, `tests/test_heavy.sh`, and `tests/run_all.sh`.
+4. Prepare PDF report, PPTX slide, and ZIP submission.
 
 ---
 
 ## Current Verdict
 
-envctr is architecturally sound and fully planned. All professor requirements
-are mapped to specific implementation targets. No requirement is missing from
-the design. Execution starts immediately on Day 1.
+The project is partially implemented and the scope is now clear. Logger is merged, fingerprinting and CLI infrastructure are in pending PRs, and the remaining work is focused on lockfile generation, drift comparison, Mistral explanation, tests, and final submission documents.

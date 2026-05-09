@@ -1,0 +1,13 @@
+{
+  "name": "microservices-monorepo",
+  "version": "1.0.0",
+  "engines": {
+    "node": "18"
+  },
+  "workspaces": [
+    "services/*"
+  ],
+  "dependencies": {
+    "express": "^4.18.0"
+  }
+}
